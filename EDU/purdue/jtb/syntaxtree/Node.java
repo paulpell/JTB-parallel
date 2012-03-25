@@ -12,5 +12,6 @@ public interface Node extends java.io.Serializable {
    public <R,A> R accept(EDU.purdue.jtb.visitor.GJVisitor<R,A> v, A argu);
    public <R> R accept(EDU.purdue.jtb.visitor.GJNoArguVisitor<R> v);
    public <A> void accept(EDU.purdue.jtb.visitor.GJVoidVisitor<A> v, A argu);
+   public void accept(EDU.purdue.jtb.visitor.ThreadedVisitor v);
 }
 

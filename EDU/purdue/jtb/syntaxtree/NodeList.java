@@ -38,6 +38,9 @@ public class NodeList implements NodeListInterface {
    public <A> void accept(EDU.purdue.jtb.visitor.GJVoidVisitor<A> v, A argu) {
       v.visit(this,argu);
    }
+   public void accept(EDU.purdue.jtb.visitor.ThreadedVisitor v) {
+	   v.visit(this);
+   }
 
    public Vector<Node> nodes;
 }

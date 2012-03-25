@@ -121,31 +121,20 @@ public class ThreadedVisitorBuilder {
 		            if ( Globals.javaDocComments ) out.println(spc.spc + " * </PRE>");
 		            out.println(spc.spc + " */");
 		            
-		            // we will need to know which fields exist in the class (f0, f1, etc.)
-		            Field[] fields = null;
-		            try {
-		            	fields = Class.forName(name).getFields();
-		            } catch (ClassNotFoundException ex) {
-		            	Errors.hardErr("Could not create visit method for class " + name);
-		            }
-		            if (fields == null) {
-		            	out.close();
-		            	return;
-		            }
+		            // try to generate a thread for each field in cur
+		            Vector fields = cur.getNameList();
 		            out.println (spc.spc +    "public void visit(" + name + " n) {");
-		            for (int i=0; i<fields.length; i++) {
-		            	String fieldName = fields[i].toString();
-		            	if (fieldName.startsWith("f")) { // TODO remove this check?
-		            		out.println(
-		            				spc.spc + "  if (getThread()) {\n" +
-		            				spc.spc + "    new Thread() {\n" +
-		            				spc.spc + "      n." + fieldName +".accept(this);\n" +
-		            				spc.spc + "      freeThread();\n" +
-		            				spc.spc + "    }.start();\n" +
-		            				spc.spc + "  }\n" +
-		            				spc.spc + "  else\n" +
-		            				spc.spc + "    n." + fieldName + ".accept(this);\n");
-		            	}
+		            for (Enumeration e2 = fields.elements(); e2.hasMoreElements();) {
+		            	String fieldName = (String)e2.nextElement();
+		            	out.println(
+		            			spc.spc + "  if (getThread()) {\n" +
+		            			spc.spc + "    new Thread() {\n" +
+		            			spc.spc + "      n." + fieldName +".accept(this);\n" +
+		            			spc.spc + "      freeThread();\n" +
+		            			spc.spc + "    }.start();\n" +
+		            			spc.spc + "  }\n" +
+		            			spc.spc + "  else\n" +
+		            			spc.spc + "    n." + fieldName + ".accept(this);\n");
 		            }
 		            out.println(spc.spc + "}");
 		            
@@ -192,36 +181,37 @@ public class ThreadedVisitorBuilder {
 	   private String getNodeListVisitorStr() {
 		   return "public void visit(NodeList n) {\n" +
 				   getEnumerationStr() +
-				   "}";
+				   "}\n";
 	   }
 	   private String getNodeListOptionalVisitorStr() {
 		   return "public void visit(NodeListOptional n) {\n" +
 				   "  if (!n.present()) return;\n" +
 				   getEnumerationStr() +
-				   "}";
+				   "}\n";
 	   }
 	   
 	   private String getNodeSequenceVisitorStr(){
 		   return "public void visit(NodeSequence n) {\n" +
 				   getEnumerationStr() + 
-				   "}";
+				   "}\n";
 	   }
 	   
 	   // even though there is only one node to visit, we will try to launch a thread:
 	   // one may have been freed in between
 	   private String getNodeOptionalVisitorStr() {
 		   return "public void visit(NodeOptional n) {\n" +
-				   	"if (!n.present()) return;\n"+
-				   	"if (getThread()) {\n"+
-				   	"  new Thread() {\n" +
-				   	"    public void run() {\n" +
-				   	"      n.node.accept(ThreadedVisitor.this)\n" +
-				   	"      freeThread();\n" +
-				   	"    }\n" +
-				   	"  }.start();\n" +
-				   	"}\n"+
-				   	"else\n"+
-				   	"  n.node.accept(this);";
+				   	"  if (!n.present()) return;\n"+
+				   	"  if (getThread()) {\n"+
+				   	"    new Thread() {\n" +
+				   	"      public void run() {\n" +
+				   	"        n.node.accept(ThreadedVisitor.this)\n" +
+				   	"        freeThread();\n" +
+				   	"      }\n" +
+				   	"    }.start();\n" +
+				   	"  }\n"+
+				   	"  else\n"+
+				   	"    n.node.accept(this);" +
+				   	"}\n";
 	   }
 	   
 	   private String getNodeTokenVisitorStr() {

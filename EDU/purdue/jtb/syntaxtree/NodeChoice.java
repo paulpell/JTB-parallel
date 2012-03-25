@@ -29,6 +29,9 @@ public class NodeChoice implements Node {
    public <A> void accept(EDU.purdue.jtb.visitor.GJVoidVisitor<A> v, A argu) {
       choice.accept(v,argu);
    }
+   public void accept(EDU.purdue.jtb.visitor.ThreadedVisitor v) {
+	   choice.accept(v);
+   }
 
    public Node choice;
    public int which;
