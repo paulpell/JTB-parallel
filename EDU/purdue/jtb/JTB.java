@@ -60,6 +60,8 @@ import EDU.purdue.jtb.visitor.*;
 import EDU.purdue.jtb.misc.*;
 import EDU.purdue.jtb.misc.toolkit.*;
 import EDU.iitm.jtb.threaded.ThreadedVisitorBuilder;
+import EDU.iitm.jtb.threaded.VectorChunker;
+
 import java.io.*;
 import java.util.*;
 
@@ -105,7 +107,12 @@ public class JTB {
          // A few notes for the parallelization
          // - If any thread notices errors, it will report them, and exit the program
          // - To print to System.err, we will use our log() method, which provides synchronization
-
+         // - list, the variable holding the classes created from the grammar file, will be
+         //     chunked, and hold in an array, see below. But some visitors should be refactored if
+         //     we want to use that, since we should instantiate several of them and each would
+         //     print the "automatic" classes, behavior that we don't want
+         
+         
          //
          // Perform actions based on command-line flags
          //
@@ -124,10 +131,22 @@ public class JTB {
          
          root.accept(vcg);              // create the class list
          final Vector list = vcg.getClassList();
+         int chunkNumber = 4;
+         final Vector[] chunkedList = VectorChunker.chunk(list, chunkNumber);
          
          // if any of the two conditions is true, we will use gen
-         final FileGenerator gen = Globals.printClassList || Globals.generateFiles ?
-        		 new FileGenerator(list) : null;
+         final FileGenerator gen;
+         final FileGenerator[] gens;
+         if (Globals.printClassList || Globals.generateFiles) {
+        	 gen = new FileGenerator(list);
+        	 gens = new FileGenerator[chunkNumber];
+        	 for (int i=0; i< chunkNumber; i++)
+        		 gens[i] = new FileGenerator(chunkedList[i]);
+         }
+         else {
+        	 gen = null;
+        	 gens = null;
+         }
 
          if ( Errors.errorCount() > 0 ) {
             Errors.printSummary();
@@ -138,10 +157,10 @@ public class JTB {
          // let it do sequentially
          if ( Globals.printGrammarToOut ) root.accept(new Printer(System.out));
          if ( Globals.printClassList ) {
-            //gen = new FileGenerator(list);
             System.out.println("\nThe classes generated and the fields each " +
                                "contains are as follows:\n");
-            gen.printClassList(new PrintWriter(System.out, true));
+            for (int i=0; i<chunkNumber; i++)
+            	gens[i].printClassList(new PrintWriter(System.out, true));
          }
          // is the end of the sequential part here ????
 
@@ -161,12 +180,10 @@ public class JTB {
                            System.exit(1); // TODO good?
                         }
 
-                        //System.err.println(progName + ":  \"" + Globals.outFilename +
                         log( progName + ":  \"" + Globals.outFilename +
                         		"\" generated to current directory.");
                      }
                      catch (FileExistsException e) {
-                        //System.err.println(progName + ":  \"" + Globals.outFilename +
                         log(progName + ":  \"" + Globals.outFilename +
                                            "\" already exists.  Won't overwrite.");
                      }
@@ -178,9 +195,9 @@ public class JTB {
             // generate the auto class files
             new Thread() {
             	public void run() {
-            		try { gen.generateAutoClassFiles(); }
+            		// use gens[0], any would be fine
+            		try { gens[0].generateAutoClassFiles(); }
                     catch (FileExistsException e) {
-                    	//System.err.println(progName + ":  One or more of the automatic "+
                     	log(progName + ":  One or more of the automatic "+
                     		"node class files already exists.  Won't overwrite.");
                     }
@@ -188,20 +205,22 @@ public class JTB {
             }.start();
             
             // generate the user class files
-            new Thread() {
-            	public void run() {
-            		try {
-                        gen.generateClassFiles();
-                        //System.err.println(progName + ":  Syntax tree Java source " +
-                        log(progName + ":  Syntax tree Java source " +
-                        		"files generated to directory \"" + Globals.nodeDir + "\".");
-                     }
-                     catch (FileExistsException e) {
-                    	 log(progName + ":  One or more of the generated "+
-                    				 "node class files already exists.  Won't overwrite.");
-                     }
-            	}
+            for (int i=0; i<chunkNumber; i++) {
+            	final int j = i;
+	            new Thread() {
+	            	public void run() {
+	            		try {
+	                        gens[j].generateClassFiles();
+	                        log(progName + ":  Syntax tree Java source " +
+	                        		"files generated to directory \"" + Globals.nodeDir + "\".");
+	                     }
+	                     catch (FileExistsException e) {
+	                    	 log(progName + ":  One or more of the generated "+
+	                    				 "node class files already exists.  Won't overwrite.");
+	                     }
+	            	}
             }.start();
+            }
             
 			
             new Thread() {
@@ -225,7 +244,7 @@ public class JTB {
             new Thread() {
             	public void run() {
 		            try {
-		                new ThreadedVisitorBuilder(list).generateVisitorFile();
+		                new ThreadedVisitorBuilder(chunkedList).generateVisitorFile();
 		                //System.err.println(progName + ":  \"" + Globals.visitorName +
 		                log(progName + ":  \"" + Globals.visitorName +
 		                   ".java\" generated " + "to directory \"" +

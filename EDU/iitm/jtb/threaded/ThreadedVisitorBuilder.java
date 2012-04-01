@@ -24,7 +24,6 @@ import EDU.purdue.jtb.misc.Spacing;
  * whether the variable freeThreads is greater than 0, and decrementing it if so.
  * After a thread is finished, it calls freeThread(), which in turn increments freeThreads again.
  *
- * TODO in the generation for the user specified classes, the fields may not be called f0, f1, etc.
  */
 
 public class ThreadedVisitorBuilder {
@@ -34,14 +33,16 @@ public class ThreadedVisitorBuilder {
 	
 	private int defaultMaxThreads = 4;
 
-	   private Vector classList;
+	   //private Vector classList;
+	   private final Vector[] classLists;
 	   private File visitorDir;
 
 	   /**
-	    * Vector must contain objects of type ClassInfo
+	    * Vectors must contain objects of type ClassInfo
 	    */
-	   public ThreadedVisitorBuilder(Vector classes) {
-	      classList = classes;
+	   public ThreadedVisitorBuilder(Vector[] classLists) {
+	     //classList = classes;
+	     this.classLists = classLists;
 	      
 	      visitorDir = new File(Globals.visitorDir);
 
@@ -111,32 +112,43 @@ public class ThreadedVisitorBuilder {
 		         out.println(spc.spc + "//");
 		         out.println();
 
-		         for ( Enumeration e = classList.elements(); e.hasMoreElements(); ) {
-		            ClassInfo cur = (ClassInfo)e.nextElement();
-		            String name = cur.getName();
+		         
+		         // for each chunk in the class list
+		         for (int i=0; i<classLists.length; i++) {
+		        	 final Vector classList = classLists[i];
+		        	 final Spacing spc2 = spc;
+		        	 final PrintWriter out2 = out;
+		        	 new Thread() {
+		        		 public void run() {
+		        			 for ( Enumeration e = classList.elements(); e.hasMoreElements(); ) {
+		        				 ClassInfo cur = (ClassInfo)e.nextElement();
+		     		            String name = cur.getName();
 
-		            out.println(spc.spc + "/**");
-		            if ( Globals.javaDocComments ) out.println(spc.spc + " * <PRE>");
-		            out.println(cur.getEbnfProduction(spc));
-		            if ( Globals.javaDocComments ) out.println(spc.spc + " * </PRE>");
-		            out.println(spc.spc + " */");
-		            
-		            // try to generate a thread for each field in cur
-		            Vector fields = cur.getNameList();
-		            out.println (spc.spc +    "public void visit(" + name + " n) {");
-		            for (Enumeration e2 = fields.elements(); e2.hasMoreElements();) {
-		            	String fieldName = (String)e2.nextElement();
-		            	out.println(
-		            			spc.spc + "  if (getThread()) {\n" +
-		            			spc.spc + "    new Thread() {\n" +
-		            			spc.spc + "      n." + fieldName +".accept(this);\n" +
-		            			spc.spc + "      freeThread();\n" +
-		            			spc.spc + "    }.start();\n" +
-		            			spc.spc + "  }\n" +
-		            			spc.spc + "  else\n" +
-		            			spc.spc + "    n." + fieldName + ".accept(this);\n");
-		            }
-		            out.println(spc.spc + "}");
+		     		            out2.println(spc2.spc + "/**");
+		     		            if ( Globals.javaDocComments ) out2.println(spc2.spc + " * <PRE>");
+		     		            out2.println(cur.getEbnfProduction(spc2));
+		     		            if ( Globals.javaDocComments ) out2.println(spc2.spc + " * </PRE>");
+		     		            out2.println(spc2.spc + " */");
+		     		            
+		     		            // try to generate a thread for each field in cur
+		     		            Vector fields = cur.getNameList();
+		     		            out2.println (spc2.spc +    "public void visit(" + name + " n) {");
+		     		            for (Enumeration e2 = fields.elements(); e2.hasMoreElements();) {
+		     		            	String fieldName = (String)e2.nextElement();
+		     		            	out2.println(
+		     		            			spc2.spc + "  if (getThread()) {\n" +
+		     		            			spc2.spc + "    new Thread() {\n" +
+		     		            			spc2.spc + "      n." + fieldName +".accept(this);\n" +
+		     		            			spc2.spc + "      freeThread();\n" +
+		     		            			spc2.spc + "    }.start();\n" +
+		     		            			spc2.spc + "  }\n" +
+		     		            			spc2.spc + "  else\n" +
+		     		            			spc2.spc + "    n." + fieldName + ".accept(this);\n");
+		     		            }
+		     		            out2.println(spc2.spc + "}");       
+		        			 }
+		        		 }
+		        	 }.start();
 		            
 		         }
 
