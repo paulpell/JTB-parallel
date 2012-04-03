@@ -1,6 +1,7 @@
 package EDU.iitm.jtb.threaded;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -33,16 +34,16 @@ public class ThreadedVisitorBuilder {
 	
 	private int defaultMaxThreads = 4;
 
-	   //private Vector classList;
 	   private final Vector[] classLists;
+	   private Thread[] threads; // we need to join at the end, so we need to know them
 	   private File visitorDir;
 
 	   /**
 	    * Vectors must contain objects of type ClassInfo
 	    */
 	   public ThreadedVisitorBuilder(Vector[] classLists) {
-	     //classList = classes;
 	     this.classLists = classLists;
+	     threads = new Thread[classLists.length];
 	      
 	      visitorDir = new File(Globals.visitorDir);
 
@@ -53,126 +54,165 @@ public class ThreadedVisitorBuilder {
 	                        "directory.");
 	   }
 	   
+	   // we assume this function is called from a thread, so we won't fork to execute its "main"
+	   // 
+	   // to print to the output file, we use the method printLine, defined below, which
+	   // provides synchronization on the output stream. To ensure a block of text is printed as a whole,
+	   // we should give it at once to printLine. For example when we write a function to the output,
+	   // it should not be interleaved with another one, so the function would be such a block.
 	   public void generateVisitorFile() throws FileExistsException {
-		   
-		   try {
+		   //try {
 		         File file = new File(visitorDir, ThreadedVisitorName + ".java");
 
 		         if ( Globals.noOverwrite && file.exists() )
 		            throw new FileExistsException(ThreadedVisitorName + ".java");
 
-		         PrintWriter out = new PrintWriter(new FileOutputStream(file), false);
-		         Spacing spc = new Spacing(INDENT_AMT);
+		         final PrintWriter out;
+		         try {
+		        	 out = new PrintWriter(new FileOutputStream(file), false);
+		         }
+		         catch (FileNotFoundException fe) {
+		        	 return;
+		         }
+		         final Spacing spc = new Spacing(INDENT_AMT);
 
-		         out.println(Globals.fileHeader(spc));
-		         out.println();
-		         out.println(spc.spc + "package " + Globals.visitorPackage + ";");
+		         StringBuffer strBuf = new StringBuffer(); 
+		         
+		         // The initial text has to appear at the top, we like constructors first also, right?
+		         // Therefore, we consider this section as setup and execute it sequentially
+		         strBuf.append(Globals.fileHeader(spc) + '\n');
+		         strBuf.append(spc.spc + "package " + Globals.visitorPackage + ";");
 		         if ( !Globals.visitorPackage.equals(Globals.nodePackage) )
-		            out.println(spc.spc + "import " + Globals.nodePackage + ".*;");
-		         out.println(spc.spc + "import java.util.*;\n");
-		         out.println(spc.spc + "/**");
-		         out.println(spc.spc + " * Base class for a threaded visitor");
-		         out.println(spc.spc + " */\n");
-		         out.println(spc.spc + "public class " + ThreadedVisitorName + " {\n");
+		        	 strBuf.append(spc.spc + "import " + Globals.nodePackage + ".*;");
+		         strBuf.append(spc.spc + "import java.util.*;\n");
+		         strBuf.append(spc.spc + "/**");
+		         strBuf.append(spc.spc + " * Base class for a threaded visitor");
+		         strBuf.append(spc.spc + " */\n");
+		         strBuf.append(spc.spc + "public class " + ThreadedVisitorName + " {\n");
 		         
 
 		         // freeThreads is of class Integer so we can use it with synchronized
-		         out.println(spc.spc + "private Integer freeThreads;\n");
+		         strBuf.append(spc.spc + "private Integer freeThreads;\n");
 		         
 		         // default constructor
-		         out.println(spc.spc +    "public " + ThreadedVisitorName + "() {\n" +
-		        		 		spc.spc + "  this(" + defaultMaxThreads + ");\n" +
-		        		 		spc.spc + "}");
+		         strBuf.append(spc.spc +    "public " + ThreadedVisitorName + "() {\n" +
+				        		 		spc.spc + "  this(" + defaultMaxThreads + ");\n" +
+				        		 		spc.spc + "}\n");
 		         // constructor to specify the maximum number of threads
-		         out.println(spc.spc +    "public " + ThreadedVisitorName + "(int maxNoThreads) {\n" +
-		        		 		spc.spc + "  freeThreads = maxNoThreads;\n" +
-		        		 		spc.spc + "}\n");
+		         strBuf.append(spc.spc +    "public " + ThreadedVisitorName + "(int maxNoThreads) {\n" +
+		        		 				spc.spc + "  freeThreads = maxNoThreads;\n" +
+		        		 				spc.spc + "}\n\n");
 		         
 		         // the synchronized methods to use the thread counts
-		         out.println(spc.spc +    "public void freeThread() {\n" +
-		        		 		spc.spc + "  synchronized (freeThreads) {\n" +
-		        		 		spc.spc + "    ++freeThreads;\n" +
-		        		 		spc.spc + "  }\n" +
-		        		 		spc.spc + "}\n");
-		         out.println(spc.spc +    "public boolean getThread() {\n" +
-		        		 		spc.spc + "  synchronized (freeThreads) {\n" +
-		        		 		spc.spc + "    if (freeThreads == 0)\n" +
-		        		 		spc.spc + "      return false;\n" +
-		        		 		spc.spc + "    --freeThreads;\n" +
-		        		 		spc.spc + "    return true;\n" +
-		        		 		spc.spc + "  }\n" +
-		        		 		spc.spc + "}\n");
+		         strBuf.append(spc.spc +    "public void freeThread() {\n" +
+		        		 				spc.spc + "  synchronized (freeThreads) {\n" +
+		        		 				spc.spc + "    ++freeThreads;\n" +
+		        		 				spc.spc + "  }\n" +
+		        		 				spc.spc + "}\n");
+		         strBuf.append(spc.spc +    "public boolean getThread() {\n" +
+		        		 				spc.spc + "  synchronized (freeThreads) {\n" +
+		        		 				spc.spc + "    if (freeThreads == 0)\n" +
+		        		 				spc.spc + "      return false;\n" +
+		        		 				spc.spc + "    --freeThreads;\n" +
+		        		 				spc.spc + "    return true;\n" +
+		        		 				spc.spc + "  }\n" +
+		        		 				spc.spc + "}\n\n");
 		         
+		         printLine(out, strBuf.toString());
 		         
 		         printAutoVisitorMethods(out);
 		         
 		         spc.updateSpc(+1);
-		         out.println(spc.spc + "//");
-		         out.println(spc.spc + "// User-generated visitor methods below");
-		         out.println(spc.spc + "//");
-		         out.println();
+		         printLine(out, spc.spc + "//\n" +
+		        		 spc.spc + "// User-generated visitor methods below\n" +
+		        		 spc.spc + "//\n");
 
 		         
 		         // for each chunk in the class list
 		         for (int i=0; i<classLists.length; i++) {
 		        	 final Vector classList = classLists[i];
-		        	 final Spacing spc2 = spc;
-		        	 final PrintWriter out2 = out;
-		        	 new Thread() {
+		        	 threads[i] = new Thread() {
 		        		 public void run() {
+		        			 // we create the whole text locally in the tread, print at each iteration
+		        			 // on the class list
+		        			 StringBuffer threadStrBuf;
 		        			 for ( Enumeration e = classList.elements(); e.hasMoreElements(); ) {
+		        				 threadStrBuf = new StringBuffer();
 		        				 ClassInfo cur = (ClassInfo)e.nextElement();
 		     		            String name = cur.getName();
 
-		     		            out2.println(spc2.spc + "/**");
-		     		            if ( Globals.javaDocComments ) out2.println(spc2.spc + " * <PRE>");
-		     		            out2.println(cur.getEbnfProduction(spc2));
-		     		            if ( Globals.javaDocComments ) out2.println(spc2.spc + " * </PRE>");
-		     		            out2.println(spc2.spc + " */");
+		     		            threadStrBuf.append(spc.spc + "/**");
+		     		            threadStrBuf.append(spc.spc + "/**");
+		     		            if ( Globals.javaDocComments ) threadStrBuf.append(spc.spc + " * <PRE>");
+		     		            threadStrBuf.append(cur.getEbnfProduction(spc));
+		     		            if ( Globals.javaDocComments ) threadStrBuf.append(spc.spc + " * </PRE>");
+		     		            threadStrBuf.append(spc.spc + " */");
 		     		            
 		     		            // try to generate a thread for each field in cur
 		     		            Vector fields = cur.getNameList();
-		     		            out2.println (spc2.spc +    "public void visit(" + name + " n) {");
+		     		            threadStrBuf.append(spc.spc +    "public void visit(" + name + " n) {");
 		     		            for (Enumeration e2 = fields.elements(); e2.hasMoreElements();) {
 		     		            	String fieldName = (String)e2.nextElement();
-		     		            	out2.println(
-		     		            			spc2.spc + "  if (getThread()) {\n" +
-		     		            			spc2.spc + "    new Thread() {\n" +
-		     		            			spc2.spc + "      n." + fieldName +".accept(this);\n" +
-		     		            			spc2.spc + "      freeThread();\n" +
-		     		            			spc2.spc + "    }.start();\n" +
-		     		            			spc2.spc + "  }\n" +
-		     		            			spc2.spc + "  else\n" +
-		     		            			spc2.spc + "    n." + fieldName + ".accept(this);\n");
+		     		            	
+		     		            	threadStrBuf.append(
+		     		            			spc.spc + "  if (getThread()) {\n" +
+		     		            			spc.spc + "    new Thread() {\n" +
+		     		            			spc.spc + "      n." + fieldName +".accept(this);\n" +
+		     		            			spc.spc + "      freeThread();\n" +
+		     		            			spc.spc + "    }.start();\n" +
+		     		            			spc.spc + "  }\n" +
+		     		            			spc.spc + "  else\n" +
+		     		            			spc.spc + "    n." + fieldName + ".accept(this);\n");
 		     		            }
-		     		            out2.println(spc2.spc + "}");       
+		     		            threadStrBuf.append(spc.spc + "}");
+		     		            printLine(out, threadStrBuf.toString());
 		        			 }
 		        		 }
-		        	 }.start();
-		            
+		        	 };
+		        	 threads[i].start();
 		         }
 
+		         // we want all the threads to finish
+	        	 for (int i=0; i<threads.length; i++)
+			         try {
+			        		 threads[i].join();
+			         } catch (InterruptedException ie) {
+			        	 // we don't care.. the thread stopped anyway
+			         }
+
 		         spc.updateSpc(-1);
-		         out.println(spc.spc + "}\n");
+		         printLine(out, spc.spc + "}\n");
 		         out.flush();
 		         out.close();
-		      }
+		      /*}
 		      catch (IOException e) {
 		         Errors.hardErr(e);
-		      }
+		      }*/
+	   }
+	   
+	   private void printLine(PrintWriter out, String txt) {
+		   synchronized (out) {
+			   out.println(txt);
+		   }
 	   }
 	   
 	   private void printAutoVisitorMethods(PrintWriter out) {
-		   out.println("   //");
-		   out.println("   // Threaded Auto class visitors");
-		   out.println("   //\n");
+		   printLine(out,
+				   "   //" +
+				   "   // Threaded Auto class visitors" +
+				   "   //\n");
 
 		      
-	      out.print(getNodeListVisitorStr());
-	      out.print(getNodeListOptionalVisitorStr());
-	      out.print(getNodeOptionalVisitorStr());
-	      out.print(getNodeSequenceVisitorStr());
-	      out.print(getNodeTokenVisitorStr());
+//	      out.print(getNodeListVisitorStr());
+//	      out.print(getNodeListOptionalVisitorStr());
+//	      out.print(getNodeOptionalVisitorStr());
+//	      out.print(getNodeSequenceVisitorStr());
+//	      out.print(getNodeTokenVisitorStr());
+		  printLine(out, getNodeListVisitorStr());
+		  printLine(out, getNodeListOptionalVisitorStr());
+		  printLine(out, getNodeOptionalVisitorStr());
+		  printLine(out, getNodeSequenceVisitorStr());
+		  printLine(out, getNodeTokenVisitorStr());
 	   }
 	   
 	   private String getEnumerationStr() {
