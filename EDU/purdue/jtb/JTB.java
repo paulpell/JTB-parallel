@@ -73,6 +73,9 @@ import java.util.*;
  *
  * @author  Kevin Tao
  * @author  Wanjun Wang, wanjun@purdue.edu
+ * 
+ * Modified by:
+ * TODO
  */
 public class JTB {
    private static InputStream in;
@@ -132,7 +135,7 @@ public class JTB {
          root.accept(vcg);              // create the class list
          final Vector list = vcg.getClassList();
          int chunkNumber = 4;
-         final Vector[] chunkedList = VectorChunker.chunk(list, chunkNumber);
+         final Vector[] chunkList = VectorChunker.chunk(list, chunkNumber);
          
          // if any of the two conditions is true, we will use gen
          final FileGenerator gen;
@@ -141,7 +144,7 @@ public class JTB {
         	 gen = new FileGenerator(list);
         	 gens = new FileGenerator[chunkNumber];
         	 for (int i=0; i< chunkNumber; i++)
-        		 gens[i] = new FileGenerator(chunkedList[i]);
+        		 gens[i] = new FileGenerator(chunkList[i]);
          }
          else {
         	 gen = null;
@@ -175,9 +178,9 @@ public class JTB {
                         if ( Errors.errorCount() > 0 ) {
                         	synchronized (System.err){
                         		Errors.printSummary(); // uses System.err
+                                System.exit(1); // TODO good?
                         	}
                            //return;
-                           System.exit(1); // TODO good?
                         }
 
                         log( progName + ":  \"" + Globals.outFilename +
@@ -219,7 +222,7 @@ public class JTB {
 	                    				 "node class files already exists.  Won't overwrite.");
 	                     }
 	            	}
-            }.start();
+	            }.start();
             }
             
 			
@@ -244,16 +247,16 @@ public class JTB {
             new Thread() {
             	public void run() {
 		            try {
-		                new ThreadedVisitorBuilder(chunkedList).generateVisitorFile();
+		                new ThreadedVisitorBuilder(chunkList).generateVisitorFile();
 		                //System.err.println(progName + ":  \"" + Globals.visitorName +
 		                log(progName + ":  \"" + Globals.visitorName +
-		                   ".java\" generated " + "to directory \"" +
+		                   ".java\" (threaded visitor) generated " + "to directory \"" +
 		                   Globals.visitorDir + "\".");
 		             }
 		             catch (FileExistsException e) {
 		                //System.err.println(progName + ":  \"" + Globals.visitorName +
 		            	 log(progName + ":  \"" + Globals.visitorName +
-		                   "\" already exists.  Won't overwrite.");
+		                   "\" (threaded visitor) already exists.  Won't overwrite.");
 		             }
             	}
             }.start();
@@ -326,6 +329,7 @@ public class JTB {
             	}
 			}.start();
 			
+
             new Thread() {
             	public void run() {
 					try {
