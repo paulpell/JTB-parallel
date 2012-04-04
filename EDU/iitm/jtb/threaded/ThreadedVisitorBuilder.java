@@ -19,10 +19,11 @@ import EDU.purdue.jtb.misc.Spacing;
 /**
  * 
  * This class will generate a default implementation of threaded visitor (no argument, no return).
+ * The tree is visited in a depth-first way
  * In the visitor, there will be a limit to the number of threads created, specified at construction time. 
  * At every node, the visitor will check whether it can launch threads to do the job.
- * Otherwise, it will go on sequentially. This is done by calling the getThread() method, which checks
- * whether the variable freeThreads is greater than 0, and decrementing it if so.
+ * If not, it will go on sequentially. This is done by calling the getThread() method, which checks
+ * whether the variable freeThreads is greater than 0, and decrements it if so.
  * After a thread is finished, it calls freeThread(), which in turn increments freeThreads again.
  *
  */
@@ -118,25 +119,24 @@ public class ThreadedVisitorBuilder {
 		        		 				spc.spc + "  }\n" +
 		        		 				spc.spc + "}\n\n");
 		         
-		         printLine(out, strBuf.toString());
+		         printLineSync(out, strBuf.toString());
 		         
 		         printAutoVisitorMethods(out);
 		         
 		         spc.updateSpc(+1);
-		         printLine(out, spc.spc + "//\n" +
+		         printLineSync(out, spc.spc + "//\n" +
 		        		 spc.spc + "// User-generated visitor methods below\n" +
 		        		 spc.spc + "//\n");
 
 		         
 		         // for each chunk in the class list
 		         for (int i=0; i<classLists.length; i++) {
-		        	 final Vector classList = classLists[i];
+		        	 final Vector thrClassList = classLists[i];
 		        	 threads[i] = new Thread() {
 		        		 public void run() {
-		        			 // we create the whole text locally in the tread, print at each iteration
-		        			 // on the class list
+		        			 // 
 		        			 StringBuffer threadStrBuf;
-		        			 for ( Enumeration e = classList.elements(); e.hasMoreElements(); ) {
+		        			 for ( Enumeration e = thrClassList.elements(); e.hasMoreElements(); ) {
 		        				 threadStrBuf = new StringBuffer();
 		        				 ClassInfo cur = (ClassInfo)e.nextElement();
 		     		            String name = cur.getName();
@@ -164,8 +164,8 @@ public class ThreadedVisitorBuilder {
 		     		            			spc.spc + "  else\n" +
 		     		            			spc.spc + "    n." + fieldName + ".accept(this);\n");
 		     		            }
-		     		            threadStrBuf.append(spc.spc + "}");
-		     		            printLine(out, threadStrBuf.toString());
+		     		            threadStrBuf.append(spc.spc + "}\n");
+		     		            printLineSync(out, threadStrBuf.toString());
 		        			 }
 		        		 }
 		        	 };
@@ -181,7 +181,7 @@ public class ThreadedVisitorBuilder {
 			         }
 
 		         spc.updateSpc(-1);
-		         printLine(out, spc.spc + "}\n");
+		         printLineSync(out, spc.spc + "}\n");
 		         out.flush();
 		         out.close();
 		      /*}
@@ -190,14 +190,14 @@ public class ThreadedVisitorBuilder {
 		      }*/
 	   }
 	   
-	   private void printLine(PrintWriter out, String txt) {
+	   private void printLineSync(PrintWriter out, String txt) {
 		   synchronized (out) {
 			   out.println(txt);
 		   }
 	   }
 	   
 	   private void printAutoVisitorMethods(PrintWriter out) {
-		   printLine(out,
+		   printLineSync(out,
 				   "   //" +
 				   "   // Threaded Auto class visitors" +
 				   "   //\n");
@@ -208,11 +208,11 @@ public class ThreadedVisitorBuilder {
 //	      out.print(getNodeOptionalVisitorStr());
 //	      out.print(getNodeSequenceVisitorStr());
 //	      out.print(getNodeTokenVisitorStr());
-		  printLine(out, getNodeListVisitorStr());
-		  printLine(out, getNodeListOptionalVisitorStr());
-		  printLine(out, getNodeOptionalVisitorStr());
-		  printLine(out, getNodeSequenceVisitorStr());
-		  printLine(out, getNodeTokenVisitorStr());
+		  printLineSync(out, getNodeListVisitorStr());
+		  printLineSync(out, getNodeListOptionalVisitorStr());
+		  printLineSync(out, getNodeOptionalVisitorStr());
+		  printLineSync(out, getNodeSequenceVisitorStr());
+		  printLineSync(out, getNodeTokenVisitorStr());
 	   }
 	   
 	   private String getEnumerationStr() {
