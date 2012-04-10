@@ -36,6 +36,8 @@ public class ThreadedVisitorBuilder {
 	private int defaultMaxThreads = 4;
 
 	   private final Vector[] classLists;
+	   
+	   // these threads will each work on one part of the class list
 	   private Thread[] threads; // we need to join at the end, so we need to know them
 	   private File visitorDir;
 
