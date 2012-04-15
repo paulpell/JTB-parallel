@@ -26,7 +26,7 @@ public class VectorChunker {
 			if (i == chunkSize) {
 				++currentChunk;
 				i = 0;
-				if (currentChunk == v.size() % chunksNo)
+				if (currentChunk == chunksNo - (v.size() % chunksNo))
 					++chunkSize;
 			}
 			ret[currentChunk].add(e.nextElement());

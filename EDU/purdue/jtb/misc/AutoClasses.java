@@ -82,7 +82,8 @@ class AutoClasses {
          "   public void accept(" + Globals.visitorPackage + ".Visitor v);\n" +
          "   public <R,A> R accept(" + Globals.visitorPackage + ".GJVisitor<R,A> v, A argu);\n" +
          "   public <R> R accept(" + Globals.visitorPackage + ".GJNoArguVisitor<R> v);\n" +
-         "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu);\n");
+         "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu);\n" +
+         "   public void accept(" + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel);\n");
 
       if ( Globals.parentPointers )
          buf.append(
@@ -111,6 +112,7 @@ class AutoClasses {
          "   public <R,A> R accept(" + Globals.visitorPackage + ".GJVisitor<R,A> v, A argu);\n" +
          "   public <R> R accept(" + Globals.visitorPackage + ".GJNoArguVisitor<R> v);\n" +
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu);\n" +
+         "   public void accept( "+  Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel);\n" +
          "}\n";
    }
 
@@ -143,6 +145,12 @@ class AutoClasses {
 		 "   }\n" +
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu) {\n" +
          "      choice.accept(v,argu);\n" +
+         "   }\n" +
+         "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
+         "     if (parallel)\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeChoice.this);}});\n" +
+         "     else\n" +
+         "       v.visit(this);\n" +
          "   }\n\n" +
          parentPointerCode() +
          "   public Node choice;\n" +
@@ -186,6 +194,12 @@ class AutoClasses {
 		 "   }\n" +
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu) {\n" +
          "      v.visit(this,argu);\n" +
+         "   }\n" +
+         "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
+         "     if (parallel)\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeList.this);}});\n" +
+         "     else\n" +
+         "       v.visit(this);\n" +
          "   }\n\n" +
          parentPointerCode() +
          "   public Vector<Node> nodes;\n" +
@@ -231,6 +245,12 @@ class AutoClasses {
 		 "   }\n" +
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu) {\n" +
          "      v.visit(this,argu);\n" +
+         "   }\n" +
+         "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
+         "     if (parallel)\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeListOptional.this);}});\n" +
+         "     else\n" +
+         "       v.visit(this);\n" +
          "   }\n\n" +
          parentPointerCode() +
          "   public Vector<Node> nodes;\n" +
@@ -273,6 +293,12 @@ class AutoClasses {
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu) {\n" +
          "      v.visit(this,argu);\n" +
 		 "   }\n" +
+         "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
+         "     if (parallel)\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeOptional.this);}});\n" +
+         "     else\n" +
+         "       v.visit(this);\n" +
+         "   }\n" +
          "   public boolean present()   { return node != null; }\n\n" +
          parentPointerCode() +
          "   public Node node;\n" +
@@ -318,7 +344,13 @@ class AutoClasses {
 		 "   }\n" +
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu) {\n" +
 		 "      v.visit(this,argu);\n" +
-		 "   }\n\n" +
+		 "   }\n" +
+         "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
+         "     if (parallel)\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeSequence.this);}});\n" +
+         "     else\n" +
+         "       v.visit(this);\n" +
+         "   }\n\n" +
          parentPointerCode() +
          "   public Vector<Node> nodes;\n" +
          "}\n");
@@ -389,7 +421,13 @@ class AutoClasses {
 		 "   }\n" +
          "   public <A> void accept(" + Globals.visitorPackage + ".GJVoidVisitor<A> v, A argu) {\n" +
 		 "      v.visit(this,argu);\n" +
-		 "   }\n\n" +
+		 "   }\n" +
+         "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
+         "     if (parallel)\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeToken.this);}});\n" +
+         "     else\n" +
+         "       v.visit(this);\n" +
+         "   }\n\n" +
          parentPointerCode() +
          "   public String tokenImage;\n\n" +
          "   // Stores a list of NodeTokens\n" +

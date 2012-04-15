@@ -130,7 +130,6 @@ public class OldDepthFirstVisitorBuilder {
             out.println(spc.spc + " */");
             out.print(spc.spc + "public void visit");
             out.println("(" + name + " n) {");
-
             spc.updateSpc(+1);
 
             for ( Enumeration f = cur.getNameList().elements();

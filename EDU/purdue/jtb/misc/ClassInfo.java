@@ -281,6 +281,16 @@ public class ClassInfo {
       out.println(space.spc + "v.visit(this,argu);");
       space.updateSpc(-1);
       out.println(space.spc + "}");
+      
+      out.println(space.spc + "public void accept(final " + Globals.visitorPackage +
+              ".ThreadedVisitor v, boolean parallel) {");
+      space.updateSpc(+1);
+      out.println(space.spc + "if (parallel)");
+      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { v.visit("+name+".this);}});");
+      out.println(space.spc + "else");
+      out.println(space.spc + "  v.visit(this);");
+      space.updateSpc(-1);
+      out.println(space.spc + "}");
 
       //
       // Output get/set parent methods
