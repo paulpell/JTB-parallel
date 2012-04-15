@@ -8,6 +8,15 @@ JAVACC_FILES="JTBParser*.java Token*.java ParseException.java JavaCharStream.jav
 
 PATH=$PATH:$JAVACC_PATH
 
+if [  -e $TARGET_DIR  -a  ! -d $TARGET_DIR  ]; then
+	echo "target dir already exists; exiting"
+	exit
+fi
+
+if [ ! -d $TARGET_DIR ]; then
+	mkdir $TARGET_DIR
+fi
+
 function check {
 	which $1 2> /dev/null
 	res=$?
@@ -30,10 +39,12 @@ javac -d $TARGET_DIR EDU/purdue/jtb/JTB.java
 cd $TARGET_DIR 
 
 #call JTB on the original grammar file
+echo; echo; echo
 echo "Running JTB..."
 java EDU/purdue/jtb/JTB $ORIG_GRAM_FILE
 
 # run javacc 
+echo; echo; echo
 echo "Removing files $JAVACC_FILES"
 rm $JAVACC_FILES
 echo "Running javacc..."
@@ -51,9 +62,11 @@ do
 done
 
 
+echo; echo; echo
 echo "Compiling the parser"
 javac Main.java
 if [ ! 0 -eq $? ];then
 	exit
 fi
-echo "Type \"cd $TARGET_DIR; java Main Main.java \" to run the parser"
+echo "Running the parser"
+cd $TARGET_DIR; java Main Main.java
