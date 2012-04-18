@@ -34,7 +34,7 @@ check perl
 
 #compile JTB
 echo "Compiling JTB..."
-javac -d $TARGET_DIR EDU/purdue/jtb/JTB.java
+javac -d $TARGET_DIR EDU/iitm/jtb/threaded/JTBParallel.java
 
 cd $TARGET_DIR 
 

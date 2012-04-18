@@ -59,14 +59,8 @@ import EDU.purdue.jtb.syntaxtree.Node;
 import EDU.purdue.jtb.visitor.*;
 import EDU.purdue.jtb.misc.*;
 import EDU.purdue.jtb.misc.toolkit.*;
-import EDU.iitm.jtb.threaded.ThreadedVisitorBuilder;
-import EDU.iitm.jtb.threaded.VectorChunker;
-
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.Executors;
 
 /**
  * Java Tree Builder (JTB) Driver
@@ -76,9 +70,6 @@ import java.util.concurrent.Executors;
  *
  * @author  Kevin Tao
  * @author  Wanjun Wang, wanjun@purdue.edu
- * 
- * Modified by:
- * TODO
  */
 public class JTB {
    private static InputStream in;
@@ -89,11 +80,7 @@ public class JTB {
 
    public static void main(String args[]) {
       JTBParser parser;
-      final Node root;
-      
-      
-      int coreNo = Runtime.getRuntime().availableProcessors();
-      ExecutorService threadPool = Executors.newFixedThreadPool(coreNo);
+      Node root;
 
       try { if ( !processCommandLine(args) ) return; }
       catch (InvalidCommandLineException e) {
@@ -108,25 +95,15 @@ public class JTB {
       parser = new JTBParser(in);
 
       try {
-          // the setup needs to be done sequentially
          root = parser.JavaCCInput();
          System.err.println(progName + ":  Input file parsed successfully.");
-         
-         
-         //
-         // A few notes for the parallelization
-         // - If any thread notices errors, it will report them, and exit the program
-         // - To print to System.err, we will use our log() method, which provides synchronization
-         // - list, the variable holding the classes created from the grammar file, will be
-         //     chunked, and hold in an array, see below. But some visitors should be refactored if
-         //     we want to use that, since we should instantiate several of them and each would
-         //     print the "automatic" classes, behavior that we don't want
-         
-         
+
          //
          // Perform actions based on command-line flags
          //
          ClassGenerator vcg = new ClassGenerator();
+         Vector list;
+         FileGenerator gen = null;
 
          Errors.resetCounts();
 
@@ -138,250 +115,162 @@ public class JTB {
                return;
             }
          }
-         
+
          root.accept(vcg);              // create the class list
-         final Vector list = vcg.getClassList();
-         int chunkNumber = 4;
-         final Vector[] chunkList = VectorChunker.chunk(list, chunkNumber);
-         
-         // if any of the two conditions is true, we will use gen
-         final FileGenerator gen;
-         final FileGenerator[] gens;
-         if (Globals.printClassList || Globals.generateFiles) {
-        	 gen = new FileGenerator(list);
-        	 gens = new FileGenerator[chunkNumber];
-        	 for (int i=0; i< chunkNumber; i++)
-        		 gens[i] = new FileGenerator(chunkList[i]);
-         }
-         else {
-        	 gen = null;
-        	 gens = null;
-         }
+         list = vcg.getClassList();
 
          if ( Errors.errorCount() > 0 ) {
             Errors.printSummary();
             return;
          }
 
-         // we want these two reports to appear before anything else, so we will
-         // let it do sequentially
          if ( Globals.printGrammarToOut ) root.accept(new Printer(System.out));
          if ( Globals.printClassList ) {
+            gen = new FileGenerator(list);
             System.out.println("\nThe classes generated and the fields each " +
                                "contains are as follows:\n");
-            for (int i=0; i<chunkNumber; i++)
-            	gens[i].printClassList(new PrintWriter(System.out, true));
+            gen.printClassList(new PrintWriter(System.out, true));
          }
-         // is the end of the sequential part here ????
 
          if ( Globals.generateFiles ) {
-        	 
-        	 // create the new grammar file
-        	threadPool.submit(
-        	new Runnable() {
-            	public void run() {
-            		try {
-                        root.accept(new Annotator());
+            Annotator annotator;
 
-                        if ( Errors.errorCount() > 0 ) {
-                        	synchronized (System.err){
-                        		Errors.printSummary(); // uses System.err
-                                System.exit(1);
-                        	}
-                        }
+            try {
+               root.accept(new Annotator());
 
-                        log( progName + ":  \"" + Globals.outFilename +
-                        		"\" generated to current directory.");
-                     }
-                     catch (FileExistsException e) {
-                        log(progName + ":  \"" + Globals.outFilename +
-                                           "\" already exists.  Won't overwrite.");
-                     }
-            		
-            	}
-            });             
+               if ( Errors.errorCount() > 0 ) {
+                  Errors.printSummary();
+                  return;
+               }
 
-            // generate the auto class files
-        	threadPool.submit(
-        	new Runnable() {
-            	public void run() {
-            		// use gens[0], any would be fine
-            		try { gens[0].generateAutoClassFiles(); }
-                    catch (FileExistsException e) {
-                    	log(progName + ":  One or more of the automatic "+
-                    		"node class files already exists.  Won't overwrite.");
-                    }
-            	}
-            });
-            
-            // generate the user class files
-            for (int i=0; i<chunkNumber; i++) {
-            	final int j = i;
-            	threadPool.submit(
-            	new Runnable() {
-            		public void run() {
-	            		try {
-	                        gens[j].generateClassFiles();
-	                        log(progName + ":  Syntax tree Java source " +
-	                        		"files generated to directory \"" + Globals.nodeDir + "\".");
-	                     }
-	                     catch (FileExistsException e) {
-	                    	 log(progName + ":  One or more of the generated "+
-	                    				 "node class files already exists.  Won't overwrite.");
-	                     }
-	            	}
-	            });
+               System.err.println(progName + ":  \"" + Globals.outFilename +
+                                  "\" generated to current directory.");
             }
-            
-			
-            threadPool.submit(
-            new Runnable() {
-            	public void run() {
-		            try {
-		               gen.generateVisitorFile();
-		               log (progName + ":  \"" + Globals.GJVisitorName +
-		                  ".java\" generated " + "to directory \"" +
-		                  Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" + Globals.GJVisitorName +
-		                  "\" already exists.  Won't overwrite.");
-		            }
-            	}
-            });
-            
-            // TODO global threaded visitor name, replace below
-            threadPool.submit( new Runnable() {
-            	public void run() {
-		            try {
-		                new ThreadedVisitorBuilder(chunkList).generateVisitorFile();
-		                log(progName + ":  \"" + Globals.visitorName +
-		                   ".java\" (threaded visitor) generated " + "to directory \"" +
-		                   Globals.visitorDir + "\".");
-		             }
-		             catch (FileExistsException e) {
-		            	 log(progName + ":  \"" + Globals.visitorName +
-		                   "\" (threaded visitor) already exists.  Won't overwrite.");
-		             }
-            	}
-            });
-            
-            threadPool.submit( new Runnable() {
-            	public void run() {
-					try {
-		               new OldFileGenerator(list).generateVisitorFile();
-		               log(progName + ":  \"" + Globals.visitorName +
-		                  ".java\" generated " + "to directory \"" +
-		                  Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" + Globals.visitorName +
-		                  "\" already exists.  Won't overwrite.");
-		            }
-            	}
-            });
-            
-			threadPool.submit( new Runnable() {
-            	public void run() {
-					try {
-		               new NoArguFileGenerator(list).generateVisitorFile();
-		               log(progName + ":  \"" + Globals.GJNoArguVisitorName +
-		                  ".java\" generated " + "to directory \"" +
-		                  Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" + Globals.GJNoArguVisitorName +
-		                  "\" already exists.  Won't overwrite.");
-		            }
-            	}
-			});
-			
-			threadPool.submit( new Runnable() {
-            	public void run() {
-					try {
-		               new VoidFileGenerator(list).generateVisitorFile();
-		               log(progName + ":  \"" + Globals.GJVoidVisitorName +
-		                  ".java\" generated " + "to directory \"" +
-		                  Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" + Globals.GJVoidVisitorName +
-		                  "\" already exists.  Won't overwrite.");
-		            }
-            	}
-			});
-			
-			threadPool.submit( new Runnable() {
-            	public void run() {
-		            try {
-		               new GJDepthFirstVisitorBuilder(list).generateDepthFirstVisitor();
-		               log(progName + ":  \"" +
-		                  GJDepthFirstVisitorBuilder.outFilename + "\" " +
-		                  "generated to directory \"" + Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" +
-		                  GJDepthFirstVisitorBuilder.outFilename + "\" already exists.  "+
-		                  "Won't overwrite.");
-		            }
-            	}
-			});
-			
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" + Globals.outFilename +
+                                  "\" already exists.  Won't overwrite.");
+            }
 
-            threadPool.submit( new Runnable() {
-            	public void run() {
-					try {
-					   new OldDepthFirstVisitorBuilder(list).generateDepthFirstVisitor();
-					   log(progName + ":  \"" +
-		                  OldDepthFirstVisitorBuilder.outFilename + "\" " +
-		                  "generated to directory \"" + Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" +
-		                  OldDepthFirstVisitorBuilder.outFilename + "\" already exists.  "+
-		                  "Won't overwrite.");
-		            }
-            	}
-            });
-            
-			threadPool.submit( new Runnable() {
-            	public void run() {
-		            try {
-		               new GJNoArguDepthFirstBuilder(list).generateDepthFirstVisitor();
-		               log(progName + ":  \"" +
-		                  GJNoArguDepthFirstBuilder.outFilename + "\" " +
-		                  "generated to directory \"" + Globals.visitorDir + "\".");
-		            }
-		            catch (FileExistsException e) {
-		            	log(progName + ":  \"" +
-		                  GJNoArguDepthFirstBuilder.outFilename + "\" already exists.  "+
-		                  "Won't overwrite.");
-		            }
-            	}
-			});
+            if ( gen == null ) {
+               gen = new FileGenerator(list);
 
-            threadPool.submit( new Runnable() {
-            	public void run() {
-            		try {
-                        new GJVoidDepthFirstBuilder(list).generateDepthFirstVisitor();
-                        log(progName + ":  \"" +
-                           GJVoidDepthFirstBuilder.outFilename + "\" " +
-                           "generated to directory \"" + Globals.visitorDir + "\".");
-                     }
-                     catch (FileExistsException e) {
-                     	log(progName + ":  \"" +
-                           GJDepthFirstVisitorBuilder.outFilename + "\" already exists.  "+
-                           "Won't overwrite.");
-                     }
-            	}
-            });
-            
-            
-            // we have to wait for all the tasks to be finished here, since there is an error
-            // checking
-            threadPool.shutdown();
-            while (!threadPool.awaitTermination(1, TimeUnit.SECONDS)); // loop forever until it is finished
+               if ( Errors.errorCount() > 0 ) {
+                  Errors.printSummary();
+                  return;
+               }
+            }
 
+            try { gen.generateAutoClassFiles(); }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  One or more of the automatic "+
+                  "node class files already exists.  Won't overwrite.");
+            }
+
+            try {
+               gen.generateClassFiles();
+               System.err.println(progName + ":  Syntax tree Java source " +
+                  "files generated to directory \"" + Globals.nodeDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  One or more of the generated "+
+                  "node class files already exists.  Won't overwrite.");
+            }
+			
+			System.err.println();
+
+            try {
+               gen.generateVisitorFile();
+               System.err.println(progName + ":  \"" + Globals.GJVisitorName +
+                  ".java\" generated " + "to directory \"" +
+                  Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" + Globals.GJVisitorName +
+                  "\" already exists.  Won't overwrite.");
+            }
+
+			try {
+               new OldFileGenerator(list).generateVisitorFile();
+               System.err.println(progName + ":  \"" + Globals.visitorName +
+                  ".java\" generated " + "to directory \"" +
+                  Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" + Globals.visitorName +
+                  "\" already exists.  Won't overwrite.");
+            }
+
+			try {
+               new NoArguFileGenerator(list).generateVisitorFile();
+               System.err.println(progName + ":  \"" + Globals.GJNoArguVisitorName +
+                  ".java\" generated " + "to directory \"" +
+                  Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" + Globals.GJNoArguVisitorName +
+                  "\" already exists.  Won't overwrite.");
+            }
+
+			try {
+               new VoidFileGenerator(list).generateVisitorFile();
+               System.err.println(progName + ":  \"" + Globals.GJVoidVisitorName +
+                  ".java\" generated " + "to directory \"" +
+                  Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" + Globals.GJVoidVisitorName +
+                  "\" already exists.  Won't overwrite.");
+            }
+
+            try {
+               new GJDepthFirstVisitorBuilder(list).generateDepthFirstVisitor();
+               System.err.println(progName + ":  \"" +
+                  GJDepthFirstVisitorBuilder.outFilename + "\" " +
+                  "generated to directory \"" + Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" +
+                  GJDepthFirstVisitorBuilder.outFilename + "\" already exists.  "+
+                  "Won't overwrite.");
+            }
+
+			try {
+			   new OldDepthFirstVisitorBuilder(list).generateDepthFirstVisitor();
+               System.err.println(progName + ":  \"" +
+                  OldDepthFirstVisitorBuilder.outFilename + "\" " +
+                  "generated to directory \"" + Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" +
+                  OldDepthFirstVisitorBuilder.outFilename + "\" already exists.  "+
+                  "Won't overwrite.");
+            }
+
+            try {
+               new GJNoArguDepthFirstBuilder(list).generateDepthFirstVisitor();
+               System.err.println(progName + ":  \"" +
+                  GJNoArguDepthFirstBuilder.outFilename + "\" " +
+                  "generated to directory \"" + Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" +
+                  GJNoArguDepthFirstBuilder.outFilename + "\" already exists.  "+
+                  "Won't overwrite.");
+            }
+
+            try {
+               new GJVoidDepthFirstBuilder(list).generateDepthFirstVisitor();
+               System.err.println(progName + ":  \"" +
+                  GJVoidDepthFirstBuilder.outFilename + "\" " +
+                  "generated to directory \"" + Globals.visitorDir + "\".");
+            }
+            catch (FileExistsException e) {
+               System.err.println(progName + ":  \"" +
+                  GJDepthFirstVisitorBuilder.outFilename + "\" already exists.  "+
+                  "Won't overwrite.");
+            }
+
+			System.err.println();
 
             if ( Globals.schemeToolkit ) {
                root.accept(new SchemeSemanticChecker());
@@ -391,78 +280,58 @@ public class JTB {
                   return;
                }
 
-               threadPool.submit(
-            	  new Runnable() {
-            		  public void run() {
-            			  try {
-			                  new SchemeVisitorBuilder(list).generateSchemeBuilder();
-			                  System.err.println(progName + ":  \"" +
-			                     SchemeVisitorBuilder.outFilename + "\" generated to " +
-			                     "directory \"" + Globals.visitorDir + "\".");
-			               }
-			               catch (FileExistsException e) {
-			                  System.err.println(progName + ":  \"" +
-			                     SchemeVisitorBuilder.outFilename + "\" already exists.  " +
-			                     "Won't overwrite.");
-			               }
-            		  }
-            	  });
-               
-               threadPool.submit(
-             	  new Runnable() {
-             		  public void run() {
-             			  try {
-		                  new SchemeRecordBuilder(list).generateSchemeRecords();
-		                  System.err.println(progName + ":  \"" +
-		                     SchemeRecordBuilder.outFilename + "\" generated to " +
-		                     "current directory.");
-		               }
-		               catch (FileExistsException e) {
-		                  System.err.println(progName + ":  \"" +
-		                     SchemeRecordBuilder.outFilename + "\" already exists.  " +
-		                     "Won't overwrite.");
-		               }
-					   System.err.println();
-		            }
-             	  });
-            } // end if Globals.schemeToolkit
+               try {
+                  new SchemeVisitorBuilder(list).generateSchemeBuilder();
+                  System.err.println(progName + ":  \"" +
+                     SchemeVisitorBuilder.outFilename + "\" generated to " +
+                     "directory \"" + Globals.visitorDir + "\".");
+               }
+               catch (FileExistsException e) {
+                  System.err.println(progName + ":  \"" +
+                     SchemeVisitorBuilder.outFilename + "\" already exists.  " +
+                     "Won't overwrite.");
+               }
+
+               try {
+                  new SchemeRecordBuilder(list).generateSchemeRecords();
+                  System.err.println(progName + ":  \"" +
+                     SchemeRecordBuilder.outFilename + "\" generated to " +
+                     "current directory.");
+               }
+               catch (FileExistsException e) {
+                  System.err.println(progName + ":  \"" +
+                     SchemeRecordBuilder.outFilename + "\" already exists.  " +
+                     "Won't overwrite.");
+               }
+			   System.err.println();
+            }
 
             if ( Globals.printerToolkit ) {
-            	threadPool.submit(
-            		new Runnable() {
-            			public void run() {
-            				 try {
-            	                  new TreeDumperBuilder().generateTreeDumper();
-            	                  System.err.println(progName + ":  \"" +
-            	                     TreeDumperBuilder.outFilename + "\" generated to " +
-            	                     "directory \"" + Globals.visitorDir + "\".");
-            	               }
-            	               catch (FileExistsException e) {
-            	                  System.err.println(progName + ":  \"" +
-            	                     TreeDumperBuilder.outFilename + "\" already exists.  " +
-            	                     "Won't overwrite.");
-            	               }
-            			}
-            		});
-              
+               try {
+                  new TreeDumperBuilder().generateTreeDumper();
+                  System.err.println(progName + ":  \"" +
+                     TreeDumperBuilder.outFilename + "\" generated to " +
+                     "directory \"" + Globals.visitorDir + "\".");
+               }
+               catch (FileExistsException e) {
+                  System.err.println(progName + ":  \"" +
+                     TreeDumperBuilder.outFilename + "\" already exists.  " +
+                     "Won't overwrite.");
+               }
 
-            	threadPool.submit(
-                		new Runnable() {
-                			public void run() {
-                				 try {
-					                  new TreeFormatterBuilder(list).generateTreeFormatter();
-					                  System.err.println(progName + ":  \"" +
-					                     TreeFormatterBuilder.outFilename + "\" generated to " +
-					                     "directory \"" + Globals.visitorDir + "\".");
-					               }
-					               catch (FileExistsException e) {
-					                  System.err.println(progName + ":  \"" +
-					                     TreeFormatterBuilder.outFilename + "\" already exists.  " +
-					                     "Won't overwrite.");
-					               }
-                			}
-                		});
-            } // end if toolKit
+               try {
+                  new TreeFormatterBuilder(list).generateTreeFormatter();
+                  System.err.println(progName + ":  \"" +
+                     TreeFormatterBuilder.outFilename + "\" generated to " +
+                     "directory \"" + Globals.visitorDir + "\".");
+               }
+               catch (FileExistsException e) {
+                  System.err.println(progName + ":  \"" +
+                     TreeFormatterBuilder.outFilename + "\" already exists.  " +
+                     "Won't overwrite.");
+               }
+			   System.err.println();
+            }
 	/* 
             try { 
                new CopyCat().copy();
@@ -476,9 +345,6 @@ public class JTB {
                                   " due to security reasons.");
             }
 	*/
-
-            threadPool.shutdown();
-            while (!threadPool.awaitTermination(1, TimeUnit.SECONDS));
             if ( Errors.errorCount() > 0 || Errors.warningCount() > 0 )
                Errors.printSummary();
          }
@@ -489,11 +355,6 @@ public class JTB {
                             "parse.");
       }
       catch (Exception e) { Errors.hardErr(e); }
-   }
-   
-   // since the method is static, only one thread at a time can write here
-   private static void log(String s) {
-	   System.err.println(s);
    }
 
    /**
