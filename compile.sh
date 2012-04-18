@@ -6,6 +6,8 @@ NEW_GRAM_FILE=jtb.out.jj
 JAVACC_PATH=~/Downloads/javacc-5.0/bin/
 JAVACC_FILES="JTBParser*.java Token*.java ParseException.java JavaCharStream.java"
 
+JTB_MAIN="EDU/iitm/jtb/threaded/JTBParallel"
+
 PATH=$PATH:$JAVACC_PATH
 
 if [  -e $TARGET_DIR  -a  ! -d $TARGET_DIR  ]; then
@@ -16,6 +18,8 @@ fi
 if [ ! -d $TARGET_DIR ]; then
 	mkdir $TARGET_DIR
 fi
+
+
 
 function check {
 	which $1 2> /dev/null
@@ -34,14 +38,14 @@ check perl
 
 #compile JTB
 echo "Compiling JTB..."
-javac -d $TARGET_DIR EDU/iitm/jtb/threaded/JTBParallel.java
+javac -d $TARGET_DIR $JTB_MAIN.java
 
 cd $TARGET_DIR 
 
 #call JTB on the original grammar file
 echo; echo; echo
 echo "Running JTB..."
-java EDU/purdue/jtb/JTB $ORIG_GRAM_FILE
+java $JTB_MAIN $ORIG_GRAM_FILE
 
 # run javacc 
 echo; echo; echo
@@ -63,8 +67,10 @@ done
 
 
 echo; echo; echo
-echo "Compiling the parser"
-javac Main.java
+echo "Do you have the right Main.java?"
+echo "You can just change it, and call 'javac Main.java'"
+echo "Compiling the parser (Main.java)"
+javac Main.java 
 if [ ! 0 -eq $? ];then
 	exit
 fi

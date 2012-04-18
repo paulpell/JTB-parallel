@@ -18,7 +18,20 @@ public class Main {
 				JTBParser p = new JTBParser(in);
 				try {
 					Node r = p.CompilationUnit();
-					r.accept(new ThreadedVisitor(), false);
+					ThreadedVisitor v = new ThreadedVisitor();
+					r.accept(v, true);
+					
+					// let's give some time to the tasks to finish
+					try {
+						while (!v.isTerminated())
+							Thread.sleep(200);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						System.exit(0);
+					}
+
+					// we have to explicitly end the thread pool, too bad
+					v.shutdown();
 					//r.accept(new DepthFirstVisitor());
 				} catch (ParseException e) {
 						e.printStackTrace();
