@@ -148,7 +148,7 @@ class AutoClasses {
          "   }\n" +
          "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
          "     if (parallel)\n" +
-         "       v.addTask(new Runnable() {public void run() {v.visit(NodeChoice.this);}});\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeChoice.this); v.taskEnd();}});\n" +
          "     else\n" +
          "       v.visit(this);\n" +
          "   }\n\n" +
@@ -197,7 +197,7 @@ class AutoClasses {
          "   }\n" +
          "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
          "     if (parallel)\n" +
-         "       v.addTask(new Runnable() {public void run() {v.visit(NodeList.this);}});\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeList.this); v.taskEnd();}});\n" +
          "     else\n" +
          "       v.visit(this);\n" +
          "   }\n\n" +
@@ -248,7 +248,7 @@ class AutoClasses {
          "   }\n" +
          "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
          "     if (parallel)\n" +
-         "       v.addTask(new Runnable() {public void run() {v.visit(NodeListOptional.this);}});\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeListOptional.this); v.taskEnd();}});\n" +
          "     else\n" +
          "       v.visit(this);\n" +
          "   }\n\n" +
@@ -295,7 +295,7 @@ class AutoClasses {
 		 "   }\n" +
          "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
          "     if (parallel)\n" +
-         "       v.addTask(new Runnable() {public void run() {v.visit(NodeOptional.this);}});\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeOptional.this); v.taskEnd();}});\n" +
          "     else\n" +
          "       v.visit(this);\n" +
          "   }\n" +
@@ -347,7 +347,7 @@ class AutoClasses {
 		 "   }\n" +
          "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
          "     if (parallel)\n" +
-         "       v.addTask(new Runnable() {public void run() {v.visit(NodeSequence.this);}});\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeSequence.this); v.taskEnd();}});\n" +
          "     else\n" +
          "       v.visit(this);\n" +
          "   }\n\n" +
@@ -424,7 +424,7 @@ class AutoClasses {
 		 "   }\n" +
          "   public void accept(final " + Globals.visitorPackage + ".ThreadedVisitor v, boolean parallel) {\n" +
          "     if (parallel)\n" +
-         "       v.addTask(new Runnable() {public void run() {v.visit(NodeToken.this);}});\n" +
+         "       v.addTask(new Runnable() {public void run() {v.visit(NodeToken.this); v.taskEnd();}});\n" +
          "     else\n" +
          "       v.visit(this);\n" +
          "   }\n\n" +

@@ -286,7 +286,7 @@ public class ClassInfo {
               ".ThreadedVisitor v, boolean parallel) {");
       space.updateSpc(+1);
       out.println(space.spc + "if (parallel)");
-      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { v.visit("+name+".this);}});");
+      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { v.visit("+name+".this); v.taskEnd();}});");
       out.println(space.spc + "else");
       out.println(space.spc + "  v.visit(this);");
       space.updateSpc(-1);

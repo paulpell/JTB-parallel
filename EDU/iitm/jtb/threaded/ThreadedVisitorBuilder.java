@@ -94,7 +94,8 @@ public class ThreadedVisitorBuilder {
 
 	         // freeThreads is of class Integer so we can use it with synchronized
 	         strBuf.append(spc.spc + "private ExecutorService threadPool;\n");
-	         strBuf.append("Integer i=0;");
+	         strBuf.append("Integer tasks=0; // number of tasks currently running\n");
+	         strBuf.append("Integer i=0; // count of visited tokens\n");
 	         
 	         // default constructor
 	         strBuf.append(spc.spc +    "public " + ThreadedVisitorName + "() {\n" +
@@ -105,9 +106,23 @@ public class ThreadedVisitorBuilder {
 	        		 				spc.spc + "  threadPool = Executors.newFixedThreadPool(maxNoThreads);\n" +
 	        		 				spc.spc + "}\n\n");
 	         
-	         strBuf.append( spc.spc + "public void addTask(Runnable r) {\n" +
+	         // since the pool does not provide a count of threads, we do it ourselves
+	         strBuf.append( spc.spc + "public synchronized void addTask(Runnable r) {\n" +
+	        		 		spc.spc + "  ++tasks;\n" +
 	        		 		spc.spc + "  threadPool.submit(r);\n" + 
 	        		 		spc.spc + "}\n");
+	         
+	         strBuf.append( spc.spc + "public synchronized void taskEnd() {\n" +
+						spc.spc + "  --tasks;\n" + 
+	     		 		spc.spc + "}\n");
+	         
+	         strBuf.append( spc.spc + "public synchronized boolean isTerminated() {\n" +
+						spc.spc + "  return tasks == 0;\n" + 
+	     		 		spc.spc + "}\n");
+	         
+	         strBuf.append( spc.spc + "public void shutdown() {\n" +
+     		 		spc.spc + "  threadPool.shutdown();\n" + 
+     		 		spc.spc + "}\n");
 	        
 	         printLineSync(out, strBuf.toString());
 	         
@@ -130,16 +145,16 @@ public class ThreadedVisitorBuilder {
 	        				 ClassInfo cur = (ClassInfo)e.nextElement();
 	     		            String name = cur.getName();
 
-	     		            threadStrBuf.append(spc.spc + "/**");
-	     		            threadStrBuf.append(spc.spc + "/**");
-	     		            if ( Globals.javaDocComments ) threadStrBuf.append(spc.spc + " * <PRE>");
-	     		            threadStrBuf.append(cur.getEbnfProduction(spc));
-	     		            if ( Globals.javaDocComments ) threadStrBuf.append(spc.spc + " * </PRE>");
-	     		            threadStrBuf.append(spc.spc + " */");
+
+	     		            threadStrBuf.append(spc.spc + "/**\n");
+	     		            if ( Globals.javaDocComments ) threadStrBuf.append(spc.spc + " * <PRE>\n");
+	     		            threadStrBuf.append(cur.getEbnfProduction(spc) + "\n");
+	     		            if ( Globals.javaDocComments ) threadStrBuf.append(spc.spc + " * </PRE>\n");
+	     		            threadStrBuf.append(spc.spc + " */\n");
 	     		            
 	     		            // try to generate a thread for each field in cur
 	     		            Vector fields = cur.getNameList();
-	     		            threadStrBuf.append(spc.spc +    "public void visit(" + name + " n) {");
+	     		            threadStrBuf.append(spc.spc +    "public void visit(" + name + " n) {\n");
      		            	threadStrBuf.append(
      		   "synchronized(i){System.out.println(\"visit \"+i+\": "+name+"\");++i;}");
 	     		            for (Enumeration e2 = fields.elements(); e2.hasMoreElements();) {
