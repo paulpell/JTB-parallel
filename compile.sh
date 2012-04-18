@@ -1,8 +1,10 @@
 #/bin/bash
 
-TARGET_DIR=../bin
+TARGET_DIR=build
+
 ORIG_GRAM_FILE=EDU/purdue/jtb/jtbgram.jj
 NEW_GRAM_FILE=jtb.out.jj
+
 JAVACC_PATH=~/Downloads/javacc-5.0/bin/
 JAVACC_FILES="JTBParser*.java Token*.java ParseException.java JavaCharStream.java"
 
@@ -19,7 +21,9 @@ if [ ! -d $TARGET_DIR ]; then
 	mkdir $TARGET_DIR
 fi
 
-
+if [ ! -e $TARGET_DIR/Main.java ]; then
+	cp Main.java $TARGET_DIR
+fi
 
 function check {
 	which $1 2> /dev/null
@@ -39,6 +43,10 @@ check perl
 #compile JTB
 echo "Compiling JTB..."
 javac -d $TARGET_DIR $JTB_MAIN.java
+
+if [ ! -e $TARGET_DIR/$ORIG_GRAM_FILE ]; then
+	cp $ORIG_GRAM_FILE $TARGET_DIR/$ORIG_GRAM_FILE
+fi
 
 cd $TARGET_DIR 
 
@@ -75,4 +83,4 @@ if [ ! 0 -eq $? ];then
 	exit
 fi
 echo "Running the parser"
-cd $TARGET_DIR; java Main Main.java
+java Main Main.java
