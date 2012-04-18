@@ -250,17 +250,17 @@ public class JTBParallel {
             	}
             });
             
-            // TODO global threaded visitor name, replace below
+
             threadPool.submit( new Runnable() {
             	public void run() {
 		            try {
 		                new ThreadedVisitorBuilder(chunkList).generateVisitorFile();
-		                log(progName + ":  \"" + Globals.visitorName +
-		                   ".java\" (threaded visitor) generated " + "to directory \"" +
+		                log(progName + ":  \"" + IITGlobals.threadedVisitorName +
+		                   ".java\" generated " + "to directory \"" +
 		                   Globals.visitorDir + "\".");
 		             }
 		             catch (FileExistsException e) {
-		            	 log(progName + ":  \"" + Globals.visitorName +
+		            	 log(progName + ":  \"" + IITGlobals.threadedVisitorName +
 		                   "\" (threaded visitor) already exists.  Won't overwrite.");
 		             }
             	}
