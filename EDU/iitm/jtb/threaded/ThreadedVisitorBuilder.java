@@ -95,7 +95,7 @@ public class ThreadedVisitorBuilder {
 	         // freeThreads is of class Integer so we can use it with synchronized
 	         strBuf.append(spc.spc + "private ExecutorService threadPool;\n");
 	         strBuf.append("Integer tasks=0; // number of tasks currently running\n");
-	         strBuf.append("Integer i=0; // count of visited tokens\n");
+	         strBuf.append("Integer createdTasks=0; // added number of tasks\n");
 	         
 	         // default constructor
 	         strBuf.append(spc.spc +    "public " + ThreadedVisitorName + "() {\n" +
@@ -109,6 +109,7 @@ public class ThreadedVisitorBuilder {
 	         // since the pool does not provide a count of threads, we do it ourselves
 	         strBuf.append( spc.spc + "public synchronized void addTask(Runnable r) {\n" +
 	        		 		spc.spc + "  ++tasks;\n" +
+	        		 		spc.spc + "  ++createdTasks;\n" +
 	        		 		spc.spc + "  threadPool.submit(r);\n" + 
 	        		 		spc.spc + "}\n");
 	         
@@ -122,6 +123,7 @@ public class ThreadedVisitorBuilder {
 	         
 	         strBuf.append( spc.spc + "public void shutdown() {\n" +
      		 		spc.spc + "  threadPool.shutdown();\n" + 
+     		 		spc.spc + "  System.out.println(\"Shutdown: created \" + createdTasks);\n" + 
      		 		spc.spc + "}\n");
 	        
 	         printLineSync(out, strBuf.toString());
@@ -155,8 +157,6 @@ public class ThreadedVisitorBuilder {
 	     		            // try to generate a thread for each field in cur
 	     		            Vector fields = cur.getNameList();
 	     		            threadStrBuf.append(spc.spc +    "public void visit(" + name + " n) {\n");
-     		            	threadStrBuf.append(
-     		   "synchronized(i){System.out.println(\"visit \"+i+\": "+name+"\");++i;}");
 	     		            for (Enumeration e2 = fields.elements(); e2.hasMoreElements();) {
 	     		            	String fieldName = (String)e2.nextElement();
 	     		            	threadStrBuf.append(
