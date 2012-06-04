@@ -71,7 +71,6 @@ done
 for i in *.java2
 do
 	mv $i $(echo $i | perl -pe 's/2//')
-    rm $i
 done
 
 
