@@ -67,33 +67,56 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Java Tree Builder (JTB) Driver
  *
- * Class JTB contains the main() method of the program as well as related
+ * Class JTBParallel contains the main() method of the program as well as related
  * methods.
- *
- * @author  Kevin Tao
- * @author  Wanjun Wang, wanjun@purdue.edu
  * 
- * Modified by:
- * TODO
+ * Written by: Paul Pellegrini,
+ * inspired by the original JTB by Kevin Tao and Wanjun Wang, wanjun@purdue.edu
  */
 public class JTBParallel {
    private static InputStream in;
 
-   private static String progName = Globals.progName;
-   private static String version = Globals.version;
+   private static String progName = IITGlobals.progName;
+   private static String version = IITGlobals.version;
    private static String scriptName = Globals.scriptName;
+   
 
+   // all the stuff needed for sync
+   
+   static int threadedBuildersNumber = 1;
+   final static ReentrantLock lock = new ReentrantLock();
+   final static Condition[] threadedBuildersFinishedConditions = new Condition[threadedBuildersNumber];
+   final static boolean[] threadedBuildersFinishedBools = new boolean[threadedBuildersNumber];
+
+   static int coreNo = Runtime.getRuntime().availableProcessors();
+   final static ExecutorService threadPool = Executors.newFixedThreadPool(coreNo);
+   
+   public static void submitTask(Runnable r) {
+	   threadPool.submit(r);
+   }
+   public static ReentrantLock getLock() {
+	   return lock;
+   }
+   public static void setFinished(int builderIndex) {
+	   threadedBuildersFinishedBools[builderIndex] = true;
+	   lock.lock();
+	   threadedBuildersFinishedConditions[builderIndex].signal();
+	   lock.unlock();
+   }
+   
+   // Main
+   
    public static void main(String args[]) {
       JTBParser parser;
       final Node root;
       
       
-      int coreNo = Runtime.getRuntime().availableProcessors();
-      ExecutorService threadPool = Executors.newFixedThreadPool(coreNo);
 
       try { if ( !processCommandLine(args) ) return; }
       catch (InvalidCommandLineException e) {
@@ -122,6 +145,7 @@ public class JTBParallel {
          //     we want to use that, since we should instantiate several of them and each would
          //     print the "automatic" classes, behavior that we don't want
          
+         	
          
          //
          // Perform actions based on command-line flags
@@ -140,9 +164,9 @@ public class JTBParallel {
          }
          
          root.accept(vcg);              // create the class list
-         final Vector list = vcg.getClassList();
+         final Vector<ClassInfo> list = vcg.getClassList();
          int chunkNumber = 4;
-         final Vector[] chunkList = VectorChunker.chunk(list, chunkNumber);
+         final Vector<ClassInfo>[] chunkList = VectorChunker.<ClassInfo>chunk(list, chunkNumber);
          
          // if any of the two conditions is true, we will use gen
          final FileGenerator gen;
@@ -250,21 +274,6 @@ public class JTBParallel {
             	}
             });
             
-
-            threadPool.submit( new Runnable() {
-            	public void run() {
-		            try {
-		                new ThreadedVisitorBuilder(chunkList).generateVisitorFile();
-		                log(progName + ":  \"" + IITGlobals.threadedVisitorName +
-		                   ".java\" generated " + "to directory \"" +
-		                   Globals.visitorDir + "\".");
-		             }
-		             catch (FileExistsException e) {
-		            	 log(progName + ":  \"" + IITGlobals.threadedVisitorName +
-		                   "\" (threaded visitor) already exists.  Won't overwrite.");
-		             }
-            	}
-            });
             
             threadPool.submit( new Runnable() {
             	public void run() {
@@ -376,9 +385,39 @@ public class JTBParallel {
             	}
             });
             
+
+            /********* Threaded visitors generators ************/
             
-            // we have to wait for all the tasks to be finished here, since there is an error
-            // checking
+            
+            for (int i=0; i<threadedBuildersNumber; ++i) {
+            	threadedBuildersFinishedConditions[i] = lock.newCondition();
+            }
+            
+			threadPool.submit( new Runnable() {
+            	public void run() {
+		            try {
+		            	new ThreadedVisitorBuilder(0, chunkList).generateVisitorFile();
+		                log(progName + ":  \"" + IITGlobals.threadedDFVisitorName +
+		                   ".java\" generated " + "to directory \"" +
+		                   Globals.visitorDir + "\".");
+		             }
+		             catch (FileExistsException e) {
+		            	 log(progName + ":  \"" + IITGlobals.threadedDFVisitorName +
+		                   "\" (threaded visitor) already exists.  Won't overwrite.");
+		             }
+            	}
+            });
+            
+            
+            // we have to wait for all the tasks to be finished here, since 
+            // the number of errors is checked hereafter
+            for (int i=0; i<threadedBuildersFinishedConditions.length; ++i) {
+            	if (!threadedBuildersFinishedBools[i]) {
+	            	lock.lock();
+	            	threadedBuildersFinishedConditions[i].await();
+	            	lock.unlock();
+            	}
+            }
             threadPool.shutdown();
             while (!threadPool.awaitTermination(1, TimeUnit.SECONDS)); // loop forever until it is finished
 
