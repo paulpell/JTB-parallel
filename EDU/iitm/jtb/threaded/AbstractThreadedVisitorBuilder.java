@@ -27,7 +27,7 @@ public abstract class AbstractThreadedVisitorBuilder {
 
     protected PrintWriter out;
     
-    
+    // we need id when we signal the builder is finished, to let Main know which builder it is
 		protected int id;
 	   protected Vector<ClassInfo>[] classLists;
 	   
@@ -92,59 +92,71 @@ public abstract class AbstractThreadedVisitorBuilder {
 		 		spc.spc + "}\n");
 	   }
 	   
-	   protected void printAutoVisitorMethods() {
+	   protected void printAutoVisitorMethods(String ret, String arg) {
 		   printLineSync("   //\n" +
 		   "   // Threaded Auto class visitors\n" +
 		   "   //\n");
 
-		  printLineSync(getNodeListVisitorStr());
-		  printLineSync(getNodeListOptionalVisitorStr());
-		  printLineSync(getNodeOptionalVisitorStr());
-		  printLineSync(getNodeSequenceVisitorStr());
-		  printLineSync(getNodeTokenVisitorStr());
-		  printLineSync(getNodeChoiceVisitorStr());
+		  printLineSync(getNodeListVisitorStr(ret, arg));
+		  printLineSync(getNodeListOptionalVisitorStr(ret, arg));
+		  printLineSync(getNodeOptionalVisitorStr(ret, arg));
+		  printLineSync(getNodeSequenceVisitorStr(ret, arg));
+		  printLineSync(getNodeTokenVisitorStr(ret, arg));
+		  printLineSync(getNodeChoiceVisitorStr(ret, arg));
 	   }
 
-	   private String getEnumerationStr() {
+	   private String getEnumerationStr(String argType) {
 		   return  "  for (Enumeration<Node> e = n.elements(); e.hasMoreElements();) {\n" +
-				   "    e.nextElement().accept(this, true);\n" +
+				   "    e.nextElement().accept(this, " +
+				   (argType == null ? "" : "argu, ") +
+				   "true);\n" +
 				   "  }\n";
 	   }
 	   
-	   private String getNodeListVisitorStr() {
-		   return "public void visit(NodeList n) {\n" +
-				   getEnumerationStr() +
-				   "}\n";
+	   private String getNodeListVisitorStr(String retType, String argType) {
+		   String funcStr = 
+				   	"public " + retType +" visit(NodeList n" + 
+					(argType == null ? "" : ", " + argType + " argu") + ") {\n" +
+					getEnumerationStr(argType) +
+					//(retType.equals("void") ? "" : "return null;") +
+					"}\n";
+		   return funcStr;
 	   }
-	   private String getNodeListOptionalVisitorStr() {
-		   return "public void visit(NodeListOptional n) {\n" +
+	   private String getNodeListOptionalVisitorStr(String retType, String argType) {
+		   return "public " + retType + " visit(NodeListOptional n" +
+				   (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
 				   "  if (!n.present()) return;\n" +
-				   getEnumerationStr() +
+				   getEnumerationStr(argType) +
 				   "}\n";
 	   }
 	   
-	   private String getNodeSequenceVisitorStr(){
-		   return "public void visit(NodeSequence n) {\n" +
-				   getEnumerationStr() + 
+	   private String getNodeSequenceVisitorStr(String retType, String argType){
+		   return "public " + retType + " visit(NodeSequence n" +
+				   (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
+				   getEnumerationStr(argType) + 
 				   "}\n";
 	   }
 	   
-	   private String getNodeChoiceVisitorStr(){
-		   return "public void visit(NodeChoice n) {\n" +
-				   "  n.choice.accept(this, true);\n" +
+	   private String getNodeChoiceVisitorStr(String retType, String argType){
+		   return "public " + retType + " visit(NodeChoice n" + 
+				   (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
+				   "  n.choice.accept(this, " + 
+				   (argType == null ? "" : "argu, ")+"true);\n" +
 				   "}\n";
 	   }
 	   
-	   private String getNodeOptionalVisitorStr() {
-		   return "public void visit(NodeOptional n) {\n" +
+	   private String getNodeOptionalVisitorStr(String retType, String argType) {
+		   return "public " + retType + " visit(NodeOptional n " + 
+				    (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
 				   	"  if (!n.present()) return;\n"+
-				    "  n.node.accept(this, true);" +
-				   	"}\n";
+				    "  n.node.accept(this, " + 
+				   (argType == null ? "" : "argu, ")+"true);\n" +
+				   "}\n";
 	   }
 	   
-	   private String getNodeTokenVisitorStr() {
+	   private String getNodeTokenVisitorStr(String retType, String argType) {
 		   // do nothing
-		   return "public void visit(NodeToken n) {}\n";
+		   return "public " + retType + " visit(NodeToken n"+ (argType == null ? "" : ", " + argType +  " argu") + ") {}\n";
 	   }
 	   
 	public abstract void generateVisitorFile() throws FileExistsException;
