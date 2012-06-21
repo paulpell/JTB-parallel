@@ -54,6 +54,7 @@
 
 package EDU.purdue.jtb.misc;
 
+import EDU.iitm.jtb.threaded.IITGlobals;
 import EDU.purdue.jtb.visitor.Printer;
 import EDU.purdue.jtb.syntaxtree.*;
 import java.util.*;
@@ -248,7 +249,7 @@ public class ClassInfo {
          space.updateSpc(-1);
          out.println(space.spc + "}");
       }
-
+      
       //
       //
       // Output visit method
@@ -282,15 +283,56 @@ public class ClassInfo {
       space.updateSpc(-1);
       out.println(space.spc + "}");
       
-      out.println(space.spc + "public void accept(final " + Globals.visitorPackage +
-              ".ThreadedVisitor v, boolean parallel) {");
+      // threaded visitors are added here
+      
+      out.println(space.spc + "public void accept(final " +
+    		  Globals.visitorPackage + "." + IITGlobals.DepthFirstThreadedVisitorName +
+    		  " v, boolean parallel) {");
       space.updateSpc(+1);
       out.println(space.spc + "if (parallel)");
-      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { v.visit("+name+".this); v.taskEnd();}});");
+      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { " +
+    		  "v.visit("+name+".this); v.taskEnd();}});");
       out.println(space.spc + "else");
       out.println(space.spc + "  v.visit(this);");
       space.updateSpc(-1);
       out.println(space.spc + "}");
+      /*
+      out.println(space.spc + "public <R> R accept(final " + 
+    		  Globals.visitorPackage + "." + IITGlobals.GJNoArguThreadedVisitorName +
+              " v, boolean parallel) {");
+      space.updateSpc(+1);
+      out.println(space.spc + "if (parallel)");
+      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { " +
+    		  "R r = v.visit("+name+".this); v.taskEnd(); return r;}});");
+      out.println(space.spc + "else");
+      out.println(space.spc + "  return v.visit(this);");
+      space.updateSpc(-1);
+      out.println(space.spc + "}");*/
+      
+      out.println(space.spc + "public <A> void accept(final " +
+    		  Globals.visitorPackage + "." + IITGlobals.GJVoidThreadedVisitorName +
+    		  "<A> v, final A argu, boolean parallel) {");
+      space.updateSpc(+1);
+      out.println(space.spc + "if (parallel)");
+      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { " +
+    		  "v.visit("+name+".this, argu); v.taskEnd();}});");
+      out.println(space.spc + "else");
+      out.println(space.spc + "  v.visit(this, argu);");
+      space.updateSpc(-1);
+      out.println(space.spc + "}");
+      
+      /*
+      out.println(space.spc + "public <R,A> R accept(final " +
+    		  Globals.visitorPackage + "." + IITGlobals.GJThreadedVisitorName + " v, " +
+    		  "final A argu, boolean parallel) {");
+      space.updateSpc(+1);
+      out.println(space.spc + "if (parallel)");
+      out.println(space.spc + "  v.addTask(new Runnable() {public void run() { " +
+    		  "R r = v.visit("+name+".this, argu); v.taskEnd(); return r;}});");
+      out.println(space.spc + "else");
+      out.println(space.spc + "  return v.visit(this, argu);");
+      space.updateSpc(-1);
+      out.println(space.spc + "}");*/
 
       //
       // Output get/set parent methods

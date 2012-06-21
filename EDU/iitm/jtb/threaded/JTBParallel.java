@@ -59,7 +59,7 @@ import EDU.purdue.jtb.syntaxtree.Node;
 import EDU.purdue.jtb.visitor.*;
 import EDU.purdue.jtb.misc.*;
 import EDU.purdue.jtb.misc.toolkit.*;
-//import EDU.iitm.jtb.threaded.ThreadedVisitorBuilder;
+//import EDU.iitm.jtb.threaded.DepthFirstThreadedVisitorBuilder;
 //import EDU.iitm.jtb.threaded.VectorChunker;
 
 import java.io.*;
@@ -76,7 +76,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Class JTBParallel contains the main() method of the program as well as related
  * methods.
  * 
- * Written by: Paul Pellegrini,
+ * Modified by: Paul Pellegrini,
  * inspired by the original JTB by Kevin Tao and Wanjun Wang, wanjun@purdue.edu
  */
 public class JTBParallel {
@@ -88,8 +88,9 @@ public class JTBParallel {
    
 
    // all the stuff needed for sync
+   // We use condition variables to wait for the threaded visitor builders.
    
-   static int threadedBuildersNumber = 1;
+   static int threadedBuildersNumber = 4;
    final static ReentrantLock lock = new ReentrantLock();
    final static Condition[] threadedBuildersFinishedConditions = new Condition[threadedBuildersNumber];
    final static boolean[] threadedBuildersFinishedBools = new boolean[threadedBuildersNumber];
@@ -388,7 +389,6 @@ public class JTBParallel {
 
             /********* Threaded visitors generators ************/
             
-            
             for (int i=0; i<threadedBuildersNumber; ++i) {
             	threadedBuildersFinishedConditions[i] = lock.newCondition();
             }
@@ -396,13 +396,58 @@ public class JTBParallel {
 			threadPool.submit( new Runnable() {
             	public void run() {
 		            try {
-		            	new ThreadedVisitorBuilder(0, chunkList).generateVisitorFile();
-		                log(progName + ":  \"" + IITGlobals.threadedDFVisitorName +
+		            	new DepthFirstThreadedVisitorBuilder(0, chunkList).generateVisitorFile();
+		                log(progName + ":  \"" + IITGlobals.DepthFirstThreadedVisitorName +
 		                   ".java\" generated " + "to directory \"" +
 		                   Globals.visitorDir + "\".");
 		             }
 		             catch (FileExistsException e) {
-		            	 log(progName + ":  \"" + IITGlobals.threadedDFVisitorName +
+		            	 log(progName + ":  \"" + IITGlobals.DepthFirstThreadedVisitorName +
+		                   "\" (threaded visitor) already exists.  Won't overwrite.");
+		             }
+            	}
+            });
+			
+			threadPool.submit( new Runnable() {
+            	public void run() {
+		            try {
+		            	new GJNoArguThreadedVisitorBuilder(1, chunkList).generateVisitorFile();
+		                log(progName + ":  \"" + IITGlobals.GJNoArguThreadedVisitorName +
+		                   ".java\" generated " + "to directory \"" +
+		                   Globals.visitorDir + "\".");
+		             }
+		             catch (FileExistsException e) {
+		            	 log(progName + ":  \"" + IITGlobals.GJNoArguThreadedVisitorName +
+		                   "\" (threaded visitor) already exists.  Won't overwrite.");
+		             }
+            	}
+            });
+			
+			threadPool.submit( new Runnable() {
+            	public void run() {
+		            try {
+		            	new GJVoidThreadedVisitorBuilder(2, chunkList).generateVisitorFile();
+		                log(progName + ":  \"" + IITGlobals.GJVoidThreadedVisitorName +
+		                   ".java\" generated " + "to directory \"" +
+		                   Globals.visitorDir + "\".");
+		             }
+		             catch (FileExistsException e) {
+		            	 log(progName + ":  \"" + IITGlobals.GJVoidThreadedVisitorName +
+		                   "\" (threaded visitor) already exists.  Won't overwrite.");
+		             }
+            	}
+            });
+			
+			threadPool.submit( new Runnable() {
+            	public void run() {
+		            try {
+		            	new GJThreadedVisitorBuilder(3, chunkList).generateVisitorFile();
+		                log(progName + ":  \"" + IITGlobals.GJThreadedVisitorName +
+		                   ".java\" generated " + "to directory \"" +
+		                   Globals.visitorDir + "\".");
+		             }
+		             catch (FileExistsException e) {
+		            	 log(progName + ":  \"" + IITGlobals.GJThreadedVisitorName +
 		                   "\" (threaded visitor) already exists.  Won't overwrite.");
 		             }
             	}

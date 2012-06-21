@@ -6,14 +6,14 @@ import java.util.Vector;
 public class VectorChunker {
 
 	// creates simple block chunks from the given vector, and returns them as an array of vectors
-	public static Vector[] chunk(Vector v, int chunksNo) {
+	public static <T> Vector<T>[] chunk(Vector<T> v, int chunksNo) {
 		int i, currentChunk;
 		if (chunksNo > v.size()) chunksNo = v.size();
 		if (chunksNo <= 0) chunksNo = 1;
 
-		Vector[] ret = new Vector[chunksNo];
+		Vector<T>[] ret = new Vector[chunksNo];
 		for (i=0; i<ret.length; i++)
-			ret[i] = new Vector();
+			ret[i] = new Vector<T>();
 		
 		int chunkSize = v.size() / chunksNo;
 		
@@ -22,7 +22,7 @@ public class VectorChunker {
 		// of size chunkSize + 1. We have to increment chunkSize after v.size() % chunksNo
 		// chunks were distributed
 		i = currentChunk = 0;
-		for (Enumeration e = v.elements(); e.hasMoreElements(); ++i) {
+		for (Enumeration<T> e = v.elements(); e.hasMoreElements(); ++i) {
 			if (i == chunkSize) {
 				++currentChunk;
 				i = 0;

@@ -3,6 +3,7 @@
 TARGET_DIR=build
 
 ORIG_GRAM_FILE=EDU/purdue/jtb/jtbgram.jj
+#ORIG_GRAM_FILE=testGrammars/Java.jj
 NEW_GRAM_FILE=jtb.out.jj
 
 JAVACC_PATH=~/Downloads/javacc-5.0/bin/
@@ -35,14 +36,18 @@ function check {
 	fi
 }
 # checks whether the programs can be found
+echo; echo
+echo "Checking whether the needed programs are there.."
 check javac
 check java
 check javacc
 check perl
 
 #compile JTB
+echo; echo; echo
 echo "Compiling JTB..."
-javac -d $TARGET_DIR $JTB_MAIN.java
+echo "skipping, eclipse does the job"
+#javac -d $TARGET_DIR $JTB_MAIN.java
 
 if [ ! -e $TARGET_DIR/$ORIG_GRAM_FILE ]; then
 	cp $ORIG_GRAM_FILE $TARGET_DIR/$ORIG_GRAM_FILE
@@ -57,7 +62,7 @@ java $JTB_MAIN $ORIG_GRAM_FILE
 
 # run javacc 
 echo; echo; echo
-echo "Removing files $JAVACC_FILES"
+echo "Removing javacc files: $JAVACC_FILES"
 rm $JAVACC_FILES
 echo "Running javacc..."
 javacc $NEW_GRAM_FILE

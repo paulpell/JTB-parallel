@@ -8,9 +8,16 @@ Requirements
 ------------
 
 JTB is of course built for java-written parsers, you will need the JDK. javaCC is needed too.
-In order to simplify the final compilation, perl is used to remove some lines from the created classes.
+In order to simplify the final compilation, perl is used to remove some (package) lines from the created classes.
 
 Usage
 -----
 
-A compile.sh script is provided, which 
+A compile.sh script is provided, which can is used to compile all the stages.
+
+
+Modified files in JTB
+---------------------
+
+ClassInfo, added the accept() methods for the new visitors, and added a method to set the return (since we use an inner class).
+AutoClasses needed the same changes.
