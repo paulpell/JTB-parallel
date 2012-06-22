@@ -87,5 +87,7 @@ javac Main.java
 if [ ! 0 -eq $? ];then
 	exit
 fi
+
+echo; echo; echo
 echo "Running the parser"
 java Main Main.java
