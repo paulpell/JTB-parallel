@@ -296,18 +296,19 @@ public class ClassInfo {
       out.println(space.spc + "  v.visit(this);");
       space.updateSpc(-1);
       out.println(space.spc + "}");
-      /*
+      
       out.println(space.spc + "public <R> R accept(final " + 
     		  Globals.visitorPackage + "." + IITGlobals.GJNoArguThreadedVisitorName +
-              " v, boolean parallel) {");
+              "<R> v, boolean parallel) {");
       space.updateSpc(+1);
       out.println(space.spc + "if (parallel)");
       out.println(space.spc + "  v.addTask(new Runnable() {public void run() { " +
-    		  "R r = v.visit("+name+".this); v.taskEnd(); return r;}});");
+    		  "v.visit("+name+".this); v.taskEnd();}});");
       out.println(space.spc + "else");
       out.println(space.spc + "  return v.visit(this);");
+      out.println(space.spc + "return null;");
       space.updateSpc(-1);
-      out.println(space.spc + "}");*/
+      out.println(space.spc + "}");
       
       out.println(space.spc + "public <A> void accept(final " +
     		  Globals.visitorPackage + "." + IITGlobals.GJVoidThreadedVisitorName +
@@ -321,18 +322,19 @@ public class ClassInfo {
       space.updateSpc(-1);
       out.println(space.spc + "}");
       
-      /*
+      
       out.println(space.spc + "public <R,A> R accept(final " +
-    		  Globals.visitorPackage + "." + IITGlobals.GJThreadedVisitorName + " v, " +
+    		  Globals.visitorPackage + "." + IITGlobals.GJThreadedVisitorName + "<R,A> v, " +
     		  "final A argu, boolean parallel) {");
       space.updateSpc(+1);
       out.println(space.spc + "if (parallel)");
       out.println(space.spc + "  v.addTask(new Runnable() {public void run() { " +
-    		  "R r = v.visit("+name+".this, argu); v.taskEnd(); return r;}});");
+    		  "v.visit("+name+".this, argu); v.taskEnd();}});");
       out.println(space.spc + "else");
       out.println(space.spc + "  return v.visit(this, argu);");
+      out.println(space.spc + "return null;");
       space.updateSpc(-1);
-      out.println(space.spc + "}");*/
+      out.println(space.spc + "}");
 
       //
       // Output get/set parent methods

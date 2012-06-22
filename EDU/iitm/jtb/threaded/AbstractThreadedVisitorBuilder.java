@@ -108,8 +108,7 @@ public abstract class AbstractThreadedVisitorBuilder {
 	   private String getEnumerationStr(String argType) {
 		   return  "  for (Enumeration<Node> e = n.elements(); e.hasMoreElements();) {\n" +
 				   "    e.nextElement().accept(this, " +
-				   (argType == null ? "" : "argu, ") +
-				   "true);\n" +
+				   (argType == null ? "" : "argu, ") + "true);\n" +
 				   "  }\n";
 	   }
 	   
@@ -118,29 +117,33 @@ public abstract class AbstractThreadedVisitorBuilder {
 				   	"public " + retType +" visit(NodeList n" + 
 					(argType == null ? "" : ", " + argType + " argu") + ") {\n" +
 					getEnumerationStr(argType) +
-					//(retType.equals("void") ? "" : "return null;") +
+					(retType.equals("void") ? "" : "return null;") +
 					"}\n";
 		   return funcStr;
 	   }
 	   private String getNodeListOptionalVisitorStr(String retType, String argType) {
 		   return "public " + retType + " visit(NodeListOptional n" +
 				   (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
-				   "  if (!n.present()) return;\n" +
+				   "  if (!n.present()) return" + 
+				   (retType.equals("void") ? "" : " null") + ";\n" +
 				   getEnumerationStr(argType) +
-				   "}\n";
+				   (retType.equals("void") ? "" : "return null;") +
+					"}\n";
 	   }
 	   
 	   private String getNodeSequenceVisitorStr(String retType, String argType){
 		   return "public " + retType + " visit(NodeSequence n" +
 				   (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
 				   getEnumerationStr(argType) + 
-				   "}\n";
+				   (retType.equals("void") ? "" : "return null;") +
+					"}\n";
 	   }
 	   
 	   private String getNodeChoiceVisitorStr(String retType, String argType){
 		   return "public " + retType + " visit(NodeChoice n" + 
-				   (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
-				   "  n.choice.accept(this, " + 
+				   (argType == null ? "" : ", " + argType + " argu") + ") {\n  " +
+				   (retType.equals("void") ? "" : "return ") +
+				   "n.choice.accept(this, " + 
 				   (argType == null ? "" : "argu, ")+"true);\n" +
 				   "}\n";
 	   }
@@ -148,15 +151,19 @@ public abstract class AbstractThreadedVisitorBuilder {
 	   private String getNodeOptionalVisitorStr(String retType, String argType) {
 		   return "public " + retType + " visit(NodeOptional n " + 
 				    (argType == null ? "" : ", " + argType + " argu") + ") {\n" +
-				   	"  if (!n.present()) return;\n"+
-				    "  n.node.accept(this, " + 
+				   	"  if (!n.present()) return" + 
+				    (retType.equals("void") ? "" : " null") + ";\n  " +
+					   (retType.equals("void") ? "" : "return ") +
+				    "n.node.accept(this, " + 
 				   (argType == null ? "" : "argu, ")+"true);\n" +
 				   "}\n";
 	   }
 	   
 	   private String getNodeTokenVisitorStr(String retType, String argType) {
 		   // do nothing
-		   return "public " + retType + " visit(NodeToken n"+ (argType == null ? "" : ", " + argType +  " argu") + ") {}\n";
+		   return "public " + retType + " visit(NodeToken n"+ 
+				   (argType == null ? "" : ", " + argType +  " argu") + ") {" + 
+				   (retType.equals("void") ? "" : " return null;") + "}\n";
 	   }
 	   
 	public abstract void generateVisitorFile() throws FileExistsException;

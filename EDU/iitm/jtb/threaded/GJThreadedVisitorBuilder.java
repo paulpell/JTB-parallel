@@ -93,9 +93,9 @@ public class GJThreadedVisitorBuilder extends AbstractThreadedVisitorBuilder {
     		            for (Enumeration<String> e2 = fields.elements(); e2.hasMoreElements();) {
     		            	String fieldName = e2.nextElement();
     		            	threadStrBuf.append(
-    		            			spc.spc + "  return n." + fieldName + ".accept(this, argu, true);\n");
+    		            			spc.spc + "  n." + fieldName + ".accept(this, argu, true);\n");
     		            }
-    		            threadStrBuf.append(spc.spc + "}\n");
+    		            threadStrBuf.append(spc.spc + "return null;\n}\n");
     		            printLineSync(threadStrBuf.toString());
        			 }
        			 taskEnd(); // signals this runnable is finished
