@@ -15,6 +15,14 @@ Usage
 
 A compile.sh script is provided, which can is used to compile all the stages.
 
+The file Main.java contains examples of how to use the parser.
+
+Improvements
+------------
+
+The main interest of the project is to add threaded visitors, which means that if there are several independant parts in the parsing, we can run them in parallel.
+
+We tried to improve the main class of JTB (the grammar file parser) by parallelizing it, but it actually became slower. We will search why, as this is quite surprizing!
 
 Modified files in JTB
 ---------------------
